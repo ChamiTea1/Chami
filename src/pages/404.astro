@@ -1,0 +1,19 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { __ } from '../i18n';
+---
+
+<BaseLayout title={__('not_found')}>
+	<div id="main-content" class="relative box-border h-full w-9/10 max-w-content transition-[max-width,width] duration-200 ease-in-out sm:w-6/7 md:w-4/5">
+		<section class="w-full text-center">
+			<h1 class="inline-block pr-3 align-baseline text-8xl leading-none text-rd-gray-1000">404</h1>
+			<p class="mb-6 text-2xl text-rd-gray-1000">{__('not_found')}</p>
+			<a
+				href="/"
+				class="inline-flex items-center gap-2 rounded-lg border border-rd-gray-alpha-400 bg-rd-gray-100 px-4 py-3 text-rd-gray-1000 hover:bg-rd-gray-200 hover:text-primary"
+			>
+				<i class="fa-regular fa-house" aria-hidden="true"></i>{__('go-back-home')}
+			</a>
+		</section>
+	</div>
+</BaseLayout>

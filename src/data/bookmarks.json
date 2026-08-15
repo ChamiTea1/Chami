@@ -1,0 +1,32 @@
+[
+	{
+		"category": "开发",
+		"icon": "fa-code",
+		"items": [
+			{
+				"name": "Astro 文档",
+				"link": "https://docs.astro.build",
+				"description": "Astro 官方文档",
+				"image": ""
+			},
+			{
+				"name": "GitHub",
+				"link": "https://github.com",
+				"description": "全世界开发者协作的地方",
+				"image": ""
+			}
+		]
+	},
+	{
+		"category": "主题",
+		"icon": "fa-bookmark",
+		"items": [
+			{
+				"name": "Redefine 文档",
+				"link": "https://redefine-docs.ohevan.com",
+				"description": "本站主题的官方文档",
+				"image": ""
+			}
+		]
+	}
+]

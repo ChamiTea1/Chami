@@ -1,0 +1,339 @@
+---
+import '../styles/global.css';
+import { siteConfig, themeConfig, themeVars, themeStyleAttrs, clientThemeConfig } from '../config';
+import { i18n } from '../i18n';
+import Navbar from '../components/Navbar.astro';
+import Footer from '../components/Footer.astro';
+import SideTools from '../components/SideTools.astro';
+import SearchDialog from '../components/SearchDialog.astro';
+import ImageViewer from '../components/ImageViewer.astro';
+import walineCssUrl from '../styles/redefine/plugins/comments/waline.css?url';
+import gitalkCssUrl from '../styles/redefine/plugins/comments/gitalk.css?url';
+import twikooCssUrl from '../styles/redefine/plugins/comments/twikoo.css?url';
+import utterancesCssUrl from '../styles/redefine/plugins/comments/utterances.css?url';
+
+interface Props {
+	title?: string;
+	description?: string;
+	image?: string;
+	isHome?: boolean;
+}
+
+const { title, description, image, isHome = false } = Astro.props;
+
+const pageTitle = title
+	? `${title} | ${siteConfig.title}`
+	: `${siteConfig.title} - ${siteConfig.subtitle}`;
+const ogDescription = description ?? siteConfig.description;
+const ogImage = image ?? themeConfig.global.open_graph.image;
+
+const subtitle = themeConfig.home_banner.subtitle;
+const subtitleEntries = Array.isArray(subtitle.text) ? subtitle.text : subtitle.text ? [subtitle.text] : [];
+const hasTypedSubtitle = themeConfig.home_banner.enable && (subtitleEntries.length > 0 || Boolean(subtitle.hitokoto?.enable));
+
+const attrs = themeStyleAttrs();
+const clientConfig = JSON.stringify(clientThemeConfig()).replace(/</g, '\\u003c');
+const langAgo = JSON.stringify(i18n.ago).replace(/</g, '\\u003c');
+const i18nJson = JSON.stringify(i18n).replace(/</g, '\\u003c');
+
+const preloaderEnabled = themeConfig.global.preloader.enable === true;
+const preloaderMessage = themeConfig.global.preloader.custom_message || siteConfig.title;
+const singlePage = themeConfig.global.single_page !== false;
+const searchEnabled = themeConfig.navbar.search.enable === true;
+const mermaidEnabled = themeConfig.plugins.mermaid.enable === true;
+const aplayerEnabled = themeConfig.plugins.aplayer.enable === true;
+const gaEnabled = themeConfig.global.google_analytics.enable === true;
+const fonts = themeConfig.global.fonts;
+const commentSystem = themeConfig.comment.system;
+const commentEnabled = themeConfig.comment.enable === true;
+
+const injectHead = (themeConfig.inject.enable ? themeConfig.inject.head : []).map((item) =>
+	singlePage && item ? item.replace(/<script/gi, '<script data-swup-reload-script') : item || '',
+);
+const injectFooter = (themeConfig.inject.enable ? themeConfig.inject.footer : []).map((item) =>
+	singlePage && item ? item.replace(/<script/gi, '<script data-swup-reload-script') : item || '',
+);
+---
+
+<!doctype html>
+<html lang={siteConfig.language} {...attrs}>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="author" content={siteConfig.author} />
+		<meta name="description" content={ogDescription} />
+		<meta name="robots" content="index,follow" />
+
+		<!-- Completely eliminate flash of wrong theme -->
+		<script is:inline>
+			(function () {
+				const THEME_KEY = 'REDEFINE-THEME-STATUS';
+				const DARK = 'dark',
+					LIGHT = 'light';
+
+				function getTheme() {
+					try {
+						const saved = localStorage.getItem(THEME_KEY);
+						if (saved) {
+							const { isDark } = JSON.parse(saved);
+							return isDark ? DARK : LIGHT;
+						}
+					} catch (e) {}
+					return matchMedia('(prefers-color-scheme: dark)').matches ? DARK : LIGHT;
+				}
+
+				function applyTheme(theme) {
+					const isDark = theme === DARK;
+					const root = document.documentElement;
+					root.classList.add(theme);
+					root.classList.remove(isDark ? LIGHT : DARK);
+					root.style.colorScheme = theme;
+				}
+
+				applyTheme(getTheme());
+
+				matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ({ matches }) => {
+					if (!localStorage.getItem(THEME_KEY)) {
+						applyTheme(matches ? DARK : LIGHT);
+					}
+				});
+			})();
+		</script>
+
+		<link rel="icon" href={themeConfig.defaults.favicon} />
+		<link rel="apple-touch-icon" sizes="180x180" href={themeConfig.defaults.favicon} />
+		<meta name="theme-color" content={themeConfig.colors.primary} />
+		{themeConfig.global.open_graph.enable && <meta property="og:title" content={pageTitle} />}
+		{themeConfig.global.open_graph.enable && <meta property="og:description" content={ogDescription} />}
+		{themeConfig.global.open_graph.enable && <meta property="og:image" content={new URL(ogImage, siteConfig.url).toString()} />}
+		{themeConfig.global.open_graph.enable && <meta property="og:url" content={new URL(Astro.url.pathname, siteConfig.url).toString()} />}
+		{themeConfig.global.open_graph.enable && <meta name="twitter:card" content="summary" />}
+		{themeConfig.global.open_graph.enable && <meta name="twitter:title" content={pageTitle} />}
+		{themeConfig.global.open_graph.enable && <meta name="twitter:description" content={ogDescription} />}
+		<link rel="sitemap" href="/sitemap-index.xml" />
+		<link rel="alternate" type="application/rss+xml" title={siteConfig.title} href="/rss.xml" />
+
+		<title>{pageTitle}</title>
+
+		<link rel="stylesheet" href="/fonts/Chillax/chillax.css" />
+		<link rel="stylesheet" href="/fontawesome/fontawesome.min.css" />
+		<link rel="stylesheet" href="/fontawesome/brands.min.css" />
+		<link rel="stylesheet" href="/fontawesome/solid.min.css" />
+		<link rel="stylesheet" href="/fontawesome/regular.min.css" />
+		{themeConfig.fontawesome.thin && <link rel="stylesheet" href="/fontawesome/thin.min.css" />}
+		{themeConfig.fontawesome.light && <link rel="stylesheet" href="/fontawesome/light.min.css" />}
+		{themeConfig.fontawesome.duotone && <link rel="stylesheet" href="/fontawesome/duotone.min.css" />}
+		{themeConfig.fontawesome.sharp_solid && <link rel="stylesheet" href="/fontawesome/sharp-solid.min.css" />}
+		<link rel="stylesheet" href="/fonts/GeistMono/geist-mono.css" />
+		<link rel="stylesheet" href="/fonts/Geist/geist.css" />
+
+		{themeConfig.home_banner.custom_font.enable && themeConfig.home_banner.custom_font.url && (
+			<link href={themeConfig.home_banner.custom_font.url} rel="stylesheet" />
+		)}
+		{themeConfig.articles.code_block.font.enable && themeConfig.articles.code_block.font.url && (
+			<link href={themeConfig.articles.code_block.font.url} rel="stylesheet" />
+		)}
+		{/* 评论系统样式按需加载（global.css 不再无条件全量引入四套） */}
+		{commentEnabled && commentSystem === 'waline' && <link rel="stylesheet" href={walineCssUrl} />}
+		{commentEnabled && commentSystem === 'gitalk' && <link rel="stylesheet" href={gitalkCssUrl} />}
+		{commentEnabled && commentSystem === 'twikoo' && <link rel="stylesheet" href={twikooCssUrl} />}
+		{commentEnabled && commentSystem === 'utterances' && <link rel="stylesheet" href={utterancesCssUrl} />}
+		{fonts.chinese.enable && fonts.chinese.url && <link href={fonts.chinese.url} rel="stylesheet" />}
+		{fonts.english.enable && fonts.english.url && <link href={fonts.english.url} rel="stylesheet" />}
+		{fonts.title.enable && fonts.title.url && <link href={fonts.title.url} rel="stylesheet" />}
+
+		<Fragment set:html={themeVars()} />
+
+		{injectHead.map((item) => <Fragment set:html={item} />)}
+
+		{
+			gaEnabled && (
+				<Fragment set:html={`<script src="https://www.googletagmanager.com/gtag/js?id=${themeConfig.global.google_analytics.id}"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${themeConfig.global.google_analytics.id}');</script>`} />
+			)
+		}
+
+		<script is:inline set:html={`window.theme = ${clientConfig}; window.lang_ago = ${langAgo}; window.i18n = ${i18nJson};`}></script>
+		{themeConfig.plugins.meting_api && (
+			<script is:inline set:html={`var meting_api = ${JSON.stringify(themeConfig.plugins.meting_api)};`}></script>
+		)}
+		{hasTypedSubtitle && <script defer src="/scripts/Typed.min.js"></script>}
+		{preloaderEnabled && <script defer src="/scripts/anime.min.js"></script>}
+		{themeConfig.articles.pangu_js && <script defer src="/scripts/pangu.min.js"></script>}
+		{mermaidEnabled && (
+			<Fragment
+				set:html={
+					themeConfig.plugins.mermaid.version === '11.4.1'
+						? '<script defer src="/scripts/mermaid.min.js"></script>'
+						: `<script defer src="https://cdn.jsdelivr.net/npm/mermaid@${themeConfig.plugins.mermaid.version}/dist/mermaid.min.js"></script>`
+				}
+			/>
+		)}
+	</head>
+	<body>
+		{themeConfig.global.scroll_progress.bar && (
+			<div class="fixed top-0 left-0 z-50 w-full">
+				<span
+					id="reading-progress"
+					role="progressbar"
+					aria-label="Reading progress"
+					aria-valuemin="0"
+					aria-valuemax="100"
+					aria-valuenow="0"
+					class="invisible absolute top-0 left-0 h-0.5 w-0 bg-primary transition-[width,opacity] duration-100 ease-in-out"
+				>
+				</span>
+			</div>
+		)}
+
+		{
+			preloaderEnabled && (
+				<div
+					id="preloader"
+					data-state="visible"
+					role="status"
+					aria-live="polite"
+					aria-busy="true"
+					class="fixed inset-0 z-100 flex h-screen w-screen flex-col items-center justify-center gap-4 bg-rd-background-100 p-3 opacity-100 transition-opacity duration-200 ease-in-out data-[state=hiding]:opacity-0"
+				>
+					<h2 id="preloader-message" class="text-center font-display text-4xl leading-none font-medium tracking-normal text-rd-gray-1000 sm:text-5xl">
+						{preloaderMessage}
+					</h2>
+					<script is:inline>
+						(() => {
+							const preloader = document.getElementById('preloader');
+							const message = document.getElementById('preloader-message');
+							if (!preloader || !message) return;
+
+							const words = message.textContent.trim().split(' ');
+							message.innerHTML = '';
+							words.forEach((word) => {
+								const wordSpan = document.createElement('span');
+								wordSpan.dataset.preloaderWord = '';
+								wordSpan.innerHTML = word.replace(/\S/g, '<span data-preloader-letter>$&</span>');
+								message.appendChild(wordSpan);
+								message.appendChild(document.createTextNode(' '));
+							});
+
+							let animation = null;
+							let hidden = false;
+							const hidePreloader = () => {
+								if (hidden) return;
+								hidden = true;
+								animation?.pause();
+								preloader.dataset.state = 'hiding';
+								preloader.setAttribute('aria-busy', 'false');
+								window.setTimeout(() => {
+									preloader.hidden = true;
+								}, 200);
+							};
+
+							if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+								window.addEventListener('load', hidePreloader, { once: true });
+								return;
+							}
+
+							// anime.js 由 head 中 defer 加载，比本内联脚本晚执行；未就绪时退化为
+							// 加载完成后直接隐藏，避免 ReferenceError 卡死 preloader。
+							if (typeof anime === 'undefined') {
+								window.addEventListener('load', hidePreloader, { once: true });
+								return;
+							}
+
+							animation = anime
+								.timeline({ loop: false })
+								.add({
+									targets: '[data-preloader-letter]',
+									translateY: [20, 0],
+									translateZ: 0,
+									opacity: [0, 1],
+									filter: ['blur(5px)', 'blur(0px)'],
+									easing: 'easeOutExpo',
+									duration: 1200,
+									delay: (element, index) => 300 + 20 * index,
+								})
+								.add(
+									{
+										targets: '[data-preloader-letter]',
+										translateY: [0, -20],
+										opacity: [1, 0],
+										filter: ['blur(0px)', 'blur(5px)'],
+										easing: 'easeInExpo',
+										duration: 1000,
+										delay: (element, index) => 15 * index,
+										complete: hidePreloader,
+									},
+									'-=700',
+								);
+
+							window.addEventListener('load', () => window.setTimeout(hidePreloader, 5000), { once: true });
+						})();
+					</script>
+				</div>
+			)
+		}
+
+		<main class="relative box-border h-auto w-full bg-rd-background-100 isolate" id="swup">
+			<slot name="banner" />
+			<div
+				id="page-shell"
+				class="relative flex min-h-dvh flex-col justify-between pt-[var(--current-navbar-height)] transition-[padding] duration-200 ease-linear"
+			>
+				<div
+					id="page-header"
+					data-state="visible"
+					class="fixed top-0 right-0 z-40 box-border h-[var(--current-navbar-height)] w-full transition-[transform,padding-left,height] duration-200 ease-out data-[state=hidden]:-translate-y-full"
+				>
+					<Navbar isHome={isHome} />
+				</div>
+
+				<div
+					id="page-content"
+					class="transition-fade-up box-border flex w-full justify-center pt-0 pb-8 sm:py-10"
+				>
+					<slot />
+				</div>
+
+				<Footer />
+			</div>
+
+			<slot name="after-shell" />
+
+			<SideTools />
+
+			{searchEnabled && <SearchDialog />}
+
+			<ImageViewer />
+		</main>
+
+		{
+			injectFooter.map((item) => <Fragment set:html={item} />)
+		}
+
+		{
+			aplayerEnabled && (
+				<>
+					<div id="aplayer"></div>
+					<script defer src="/scripts/APlayer.min.js"></script>
+				</>
+			)
+		}
+
+		<script defer src="/scripts/main.js"></script>
+
+		{
+			singlePage && (
+				<Fragment
+					set:html={[
+						'<script src="/scripts/Swup.min.js"></script>',
+						'<script src="/scripts/SwupScriptsPlugin.min.js"></script>',
+						'<script src="/scripts/SwupProgressPlugin.min.js"></script>',
+						'<script src="/scripts/SwupScrollPlugin.min.js"></script>',
+						'<script src="/scripts/SwupSlideTheme.min.js"></script>',
+						'<script src="/scripts/SwupPreloadPlugin.min.js"></script>',
+						'<script>window.swup = new Swup({ plugins: [new SwupScriptsPlugin({ optin: true }), new SwupProgressPlugin(), new SwupScrollPlugin({ offset: 80 }), new SwupSlideTheme({ mainElement: "#page-content" }), new SwupPreloadPlugin()], containers: ["#swup"] });</script>',
+					].join('')}
+				/>
+			)
+		}
+	</body>
+</html>

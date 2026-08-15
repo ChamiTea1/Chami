@@ -1,0 +1,31 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import HomeBanner from '../components/HomeBanner.astro';
+import HomePage from '../components/HomePage.astro';
+import { themeConfig } from '../config';
+import { sortPosts, POSTS_PER_PAGE, type Post } from '../utils/collections';
+
+export async function getStaticPaths() {
+	const posts = sortPosts(await getCollection('blog'));
+	const totalPages = Math.max(1, Math.ceil(posts.length / POSTS_PER_PAGE));
+	return Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) => {
+		const pageNumber = index + 2;
+		return {
+			params: { page: `page/${pageNumber}` },
+			props: {
+				posts: posts.slice((pageNumber - 1) * POSTS_PER_PAGE, pageNumber * POSTS_PER_PAGE),
+				current: pageNumber,
+				total: totalPages,
+			},
+		};
+	});
+}
+
+const { posts, current, total } = Astro.props as { posts: Post[]; current: number; total: number };
+---
+
+<BaseLayout isHome>
+	{themeConfig.home_banner.enable && <HomeBanner slot="banner" full={false} blurred />}
+	<HomePage posts={posts} current={current} total={total} />
+</BaseLayout>

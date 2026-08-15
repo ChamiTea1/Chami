@@ -1,0 +1,21 @@
+---
+interface Props {
+	title: string;
+	showBorder?: boolean;
+	iconClass?: string;
+}
+
+const { title, showBorder = false, iconClass = '' } = Astro.props;
+---
+
+<h1
+	class:list={[
+		showBorder
+			? 'text-4xl mt-4 mb-8 font-medium font-display tracking-tight border-b border-rd-gray-alpha-400 pb-2'
+			: 'mt-1.5 mb-9 text-5xl leading-none font-medium text-rd-gray-1000',
+	]}
+>
+	{iconClass && <i class={iconClass} aria-hidden="true"></i>}
+	{iconClass && <>&nbsp;</>}
+	{title}
+</h1>

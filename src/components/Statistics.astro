@@ -1,0 +1,24 @@
+---
+import { getCollection } from 'astro:content';
+import { __ } from '../i18n';
+import { getCategories, getTags } from '../utils/collections';
+
+const posts = await getCollection('blog');
+const tags = getTags(posts);
+const categories = getCategories(posts);
+---
+
+<div class="statistics flex justify-around my-2.5">
+	<a data-navbar-close class="item tag-count-item flex flex-col justify-center items-center w-20" href="/tags">
+		<div class="number text-xl text-rd-gray-1000 font-semibold">{tags.length}</div>
+		<div class="label text-rd-gray-900 text-sm">{__('tags')}</div>
+	</a>
+	<a data-navbar-close class="item tag-count-item flex flex-col justify-center items-center w-20" href="/categories">
+		<div class="number text-xl text-rd-gray-1000 font-semibold">{categories.length}</div>
+		<div class="label text-rd-gray-900 text-sm">{__('categories')}</div>
+	</a>
+	<a data-navbar-close class="item tag-count-item flex flex-col justify-center items-center w-20" href="/archives">
+		<div class="number text-xl text-rd-gray-1000 font-semibold">{posts.length}</div>
+		<div class="label text-rd-gray-900 text-sm">{__('posts')}</div>
+	</a>
+</div>

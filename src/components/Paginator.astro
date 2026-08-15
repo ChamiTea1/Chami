@@ -1,0 +1,56 @@
+---
+interface Props {
+	current: number;
+	total: number;
+	baseUrl: string;
+}
+
+const { current, total, baseUrl } = Astro.props;
+
+const urlFor = (page: number) => (page === 1 ? baseUrl : `${baseUrl}page/${page}/`);
+
+type Item = { type: 'prev' | 'next' | 'page' | 'space'; page?: number; current?: boolean };
+
+const items: Item[] = [];
+const delta = 2;
+
+const pushPage = (page: number) => {
+	items.push({ type: 'page', page, current: page === current });
+};
+
+for (let i = 1; i <= total; i++) {
+	if (i === 1 || i === total || Math.abs(i - current) <= delta) {
+		pushPage(i);
+	} else if (items[items.length - 1]?.type !== 'space') {
+		items.push({ type: 'space' });
+	}
+}
+---
+
+{
+	total > 1 && (
+		<nav class="paginator mt-8 flex justify-center text-base" aria-label="Pagination">
+			{current > 1 && (
+				<a class="prev extend" rel="prev" href={urlFor(current - 1)}>
+					<i class="fa-regular fa-angle-left"></i>
+				</a>
+			)}
+			{items.map((item) =>
+				item.type === 'space' ? (
+					<span class="space">…</span>
+				) : item.current ? (
+					<span class="page-number current">{item.page}</span>
+				) : (
+					<a class="page-number" href={urlFor(item.page!)}>
+						{item.page}
+					</a>
+				),
+			)}
+			{current < total && (
+				<a class="next extend" rel="next" href={urlFor(current + 1)}>
+					<i class="fa-regular fa-angle-right"></i>
+				</a>
+			)}
+		</nav>
+	)
+}

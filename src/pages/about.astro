@@ -1,0 +1,23 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { siteConfig, themeConfig, getAuthorLabel } from '../config';
+import { __ } from '../i18n';
+
+const posts = await getCollection('blog');
+const authorLabel = themeConfig.articles.author_label.enable === true ? getAuthorLabel(posts.length) : '';
+const title = __('about');
+---
+
+<BaseLayout title={title}>
+	<div id="main-content" class="relative box-border h-full w-9/10 max-w-content transition-[max-width,width] duration-200 ease-in-out sm:w-6/7 md:w-4/5">
+		<div class="flex flex-col items-center gap-4 p-8">
+			<img src={themeConfig.defaults.avatar} alt={siteConfig.author} class="h-24 w-24 rounded-2xl border border-rd-gray-alpha-400 p-px" />
+			<div class="text-2xl font-semibold text-rd-gray-1000">{siteConfig.author}</div>
+			{authorLabel && <div class="text-sm text-rd-gray-900">{authorLabel}</div>}
+			<div class="markdown-body max-w-content text-rd-gray-1000 [overflow-wrap:break-word]">
+				<p>{siteConfig.subtitle}</p>
+			</div>
+		</div>
+	</div>
+</BaseLayout>

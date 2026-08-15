@@ -1,0 +1,223 @@
+@layer components {
+  /* ================================================================ */
+  /* 简历（resume）排版：参考标准简历模板                              */
+  /* 布局：顶部横幅 → 照片在左、个人信息在右 → 求职意向 → 单栏章节      */
+  /* ================================================================ */
+
+  .resume {
+    padding-top: 0.25rem;
+    font-size: 1.0625rem;
+  }
+
+  /* ---- 顶部横幅 ---- */
+
+  .resume-banner {
+    padding: 0.55rem 1rem;
+    border-radius: 14px 14px 0 0;
+    background: var(--primary-color);
+    color: var(--rd-primary-text);
+    text-align: center;
+    font-family: var(--font-article-title);
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.3em;
+  }
+
+  /* ---- 头部：照片在左，个人信息在右 ---- */
+
+  .resume-head {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem 1.5rem;
+    padding: 1.25rem 1.5rem 1.25rem;
+    border: 1px solid var(--rd-gray-alpha-400);
+    border-top: 0;
+    border-radius: 0 0 14px 14px;
+    background: var(--rd-background-100);
+  }
+
+  @media (min-width: 640px) {
+    .resume-head {
+      flex-direction: row;
+      align-items: center;
+    }
+  }
+
+  .resume-photo {
+    flex-shrink: 0;
+    width: 96px;
+    height: 120px;
+    overflow: hidden;
+    border: 1px solid var(--rd-gray-alpha-400);
+    border-radius: 8px;
+    background: var(--rd-gray-100);
+  }
+
+  @media (min-width: 640px) {
+    .resume-photo {
+      width: 120px;
+      height: 150px;
+    }
+  }
+
+  .resume-photo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .resume-profile {
+    flex: 1;
+    min-width: 0;
+    align-self: center;
+    width: 100%;
+  }
+
+  /* ---- 个人信息表：两列键值对，值带下划线 ---- */
+
+  .resume-profile-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem 2rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 1.05rem;
+  }
+
+  @media (min-width: 640px) {
+    .resume-profile-grid {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+  }
+
+  .resume-profile-grid li {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    min-width: 0;
+    line-height: 1.9;
+  }
+
+  .resume-profile-key {
+    flex-shrink: 0;
+    color: var(--rd-gray-900);
+  }
+
+  .resume-profile-key::after {
+    content: '：';
+  }
+
+  .resume-profile-value {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: break-word;
+    color: var(--rd-gray-1000);
+    border-bottom: 1px dashed var(--rd-gray-alpha-400);
+  }
+
+  /* ---- 求职意向 + 摘要行 ---- */
+
+  .resume-objective {
+    margin: 1rem 0 0;
+    font-size: 1.1rem;
+    color: var(--rd-gray-1000);
+    font-weight: 600;
+  }
+
+  .resume-meta {
+    margin: 0.5rem 0 0;
+    font-size: 0.95rem;
+    color: var(--rd-gray-900);
+  }
+
+  /* ---- 章节标题：左侧主色竖条 + 底部细分隔线 ---- */
+
+  .resume-section {
+    margin-bottom: 1.75rem;
+  }
+
+  .resume-section-title {
+    position: relative;
+    margin: 2rem 0 1rem;
+    padding: 0 0 0.55rem 0.9rem;
+    border-bottom: 1px solid var(--rd-gray-alpha-400);
+    font-family: var(--font-article-title);
+    font-size: 1.3rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--rd-gray-1000);
+  }
+
+  .resume-section-title::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.35em;
+    width: 4px;
+    height: 1em;
+    border-radius: 9999px;
+    background: var(--primary-color);
+  }
+
+  /* ---- 经历条目：标题在左、时间在右 ---- */
+
+  .resume-entry {
+    margin-bottom: 1rem;
+  }
+
+  .resume-entry-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .resume-entry-title {
+    font-weight: 600;
+    color: var(--rd-gray-1000);
+  }
+
+  .resume-entry-date {
+    flex-shrink: 0;
+    font-size: 0.95rem;
+    color: var(--rd-gray-900);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .resume-entry-sub {
+    margin: 0.4rem 0 0;
+    font-size: 1rem;
+    color: var(--rd-gray-900);
+  }
+
+  /* ---- 要点列表：主色圆点 ---- */
+
+  .resume-bullets {
+    margin: 0.5rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .resume-bullets li {
+    position: relative;
+    margin-bottom: 0.45rem;
+    padding-left: 1rem;
+    line-height: 1.7;
+    color: var(--rd-gray-1000);
+  }
+
+  .resume-bullets li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.72em;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--primary-color);
+  }
+}

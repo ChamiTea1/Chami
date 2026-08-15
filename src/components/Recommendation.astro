@@ -1,0 +1,160 @@
+---
+import { getCollection } from 'astro:content';
+import { themeConfig } from '../config';
+import { normalizePostCover, sortPosts, stripMarkdown, type Post } from '../utils/collections';
+
+interface Props {
+	post: Post;
+}
+
+const { post } = Astro.props;
+
+const cfg = themeConfig.articles.recommendation;
+
+interface LibraryItem {
+	id: string;
+	title: string;
+	image: string;
+	tokens: string[];
+}
+
+/** 构建时按进程缓存语料与 TF-IDF 向量，避免每篇文章页都全量重建。 */
+let libraryCache: LibraryItem[] | null = null;
+let vectorsCache: number[][] | null = null;
+
+async function getLibrary(): Promise<{ library: LibraryItem[]; vectors: number[][] }> {
+	if (libraryCache && vectorsCache) return { library: libraryCache, vectors: vectorsCache };
+
+	const allPosts = sortPosts(await getCollection('blog'));
+
+	const cleanData = (data: string): string => {
+		let text = data.replace(/\s/g, ' ');
+		text = text.replace(/!\[(.*?)\]\(.*?\)/g, '$1');
+		text = text.replace(/(http|ftp|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-.,@?^=%&amp;:/~+#]*[\w\-@?^=%&amp;/~+#])?/g, ' ');
+		text = text.replace(/[^\p{L}\p{N}\s]/gu, ' ');
+		text = text.replace(/\d+/g, ' ');
+		text = text.replace(/\s+/g, ' ');
+		return text.trim();
+	};
+
+	const tokenize = (data: string): string[] => {
+		const cleaned = cleanData(stripMarkdown(data));
+		const tokens: string[] = [];
+		const latinMatches = cleaned.match(/[a-zA-Z][a-zA-Z0-9'-]*/g) ?? [];
+		latinMatches.forEach((word) => tokens.push(word.toLowerCase()));
+		const cjk = cleaned.replace(/[a-zA-Z0-9\s'-]/g, '');
+		for (let i = 0; i < cjk.length - 1; i++) {
+			tokens.push(cjk.slice(i, i + 2));
+		}
+		return tokens.filter((token) => token.trim());
+	};
+
+	libraryCache = allPosts.map((p) => ({
+		id: p.id,
+		title: p.data.title,
+		image: (() => {
+			const cover = normalizePostCover(p.data);
+			if (typeof cover === 'string') return cover;
+			if (cover && typeof cover === 'object' && 'src' in cover) return cover.src;
+			return cfg.placeholder;
+		})(),
+		tokens: tokenize(p.body ?? ''),
+	}));
+
+	const corpus = libraryCache.map((item) => item.tokens);
+	const allWords = [...new Set(corpus.flat())];
+	const wordLibrary: Record<string, number> = {};
+	allWords.forEach((word) => {
+		wordLibrary[word] = 0;
+	});
+
+	const documentCountLibrary = { ...wordLibrary };
+	const wordFrequencies: Record<string, number>[] = [];
+	corpus.forEach((wordsInArticle) => {
+		const wordOccurrence = { ...wordLibrary };
+		wordsInArticle.forEach((word) => {
+			if (word in wordOccurrence) wordOccurrence[word]++;
+		});
+		const frequency = { ...wordLibrary };
+		for (const word of Object.keys(wordLibrary)) {
+			frequency[word] = wordOccurrence[word] / (wordsInArticle.length || 1);
+		}
+		wordFrequencies.push(frequency);
+		for (const word of Object.keys(wordLibrary)) {
+			if (frequency[word]) documentCountLibrary[word]++;
+		}
+	});
+
+	vectorsCache = wordFrequencies.map((frequency) =>
+		Object.keys(wordLibrary).map((word) => {
+			const idf = Math.log(corpus.length / (documentCountLibrary[word] + 1));
+			return frequency[word] * idf;
+		}),
+	);
+
+	return { library: libraryCache, vectors: vectorsCache };
+}
+
+const cosineSimilarity = (vector1: number[], vector2: number[]): number => {
+	let numerator = 0;
+	let sqrt1 = 0;
+	let sqrt2 = 0;
+	if (vector1.length === vector2.length) {
+		for (let i = 0; i < vector1.length; i++) {
+			numerator += vector1[i] * vector2[i];
+			sqrt1 += vector1[i] * vector1[i];
+			sqrt2 += vector2[i] * vector2[i];
+		}
+	}
+	return numerator / (Math.sqrt(sqrt1) * Math.sqrt(sqrt2) || 1);
+};
+
+const skip = cfg.skip_dirs.some((dir) => new RegExp(`^${dir}`, 'g').test(post.id));
+let recommendations: { id: string; title: string; image: string }[] = [];
+
+if (!skip) {
+	const { library, vectors } = await getLibrary();
+
+	const currentIndex = library.findIndex((item) => item.id === post.id);
+	if (currentIndex !== -1) {
+		const similarities = library.map((item, index) => ({
+			...item,
+			score: index === currentIndex ? -1 : cosineSimilarity(vectors[currentIndex], vectors[index]),
+		}));
+		similarities.sort((a, b) => b.score - a.score);
+		recommendations = similarities.filter((item) => item.score > 0).slice(0, cfg.limit);
+	}
+}
+
+const coverUrl = (item: { id: string; title: string; image: string }) => ({
+	url: `/blog/${item.id}/`,
+	title: item.title,
+	image: item.image,
+});
+---
+
+{
+	recommendations.length > 0 && (
+		<section class="hidden min-[1200px]:block mt-4 shrink-0 rounded-2xl border border-rd-gray-alpha-400 bg-rd-background-100 shadow-rd">
+			<div class="flex items-center gap-1.5 border-b border-rd-gray-alpha-400 px-5 py-3.5">
+				<i class="fa-regular fa-star text-rd-gray-900" aria-hidden="true"></i>
+				<span class="text-sm font-bold text-rd-gray-1000">{cfg.title}</span>
+			</div>
+			<ul class="flex flex-col gap-3 px-3 py-3">
+				{recommendations.map((item) => {
+					const { url, title, image } = coverUrl(item);
+					return (
+						<li>
+							<a href={url} title={title} rel="bookmark" class="group flex items-center gap-3">
+								<img src={image} alt={title} class="size-12 shrink-0 rounded-lg border border-rd-gray-alpha-400 object-cover transition-transform duration-300 group-hover:scale-105" />
+								<span class="line-clamp-2 min-w-0 text-sm leading-snug text-rd-gray-1000 transition-colors group-hover:!text-primary">
+									{title}
+								</span>
+							</a>
+						</li>
+					);
+				})}
+			</ul>
+		</section>
+	)
+}

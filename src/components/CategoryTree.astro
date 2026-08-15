@@ -1,0 +1,39 @@
+---
+import { __ } from '../i18n';
+import CategoryNested from './CategoryNested.astro';
+import type { CategoryNode } from '../utils/collections';
+
+interface Props {
+	category: CategoryNode;
+}
+
+const { category } = Astro.props;
+const categoryUrl = (path: string) => `/categories/${path.split('/').map(encodeURIComponent).join('/')}/`;
+---
+
+<li data-category-group class="mb-8 break-inside-avoid">
+	<div class="relative px-5 z-10 flex min-h-15 items-center justify-between overflow-hidden rounded-full border border-rd-gray-alpha-400 bg-rd-background-100 shadow-rd">
+		<a class="flex min-w-0 items-center text-xl font-semibold text-rd-gray-1000 transition-colors hover:text-primary" href={categoryUrl(category.path)}>
+			{category.name}
+		</a>
+		<span class="flex items-center text-rd-gray-900 font-mono text-sm px-2 bg-rd-gray-100 rounded-full aspect-square">
+			{category.count}
+		</span>
+	</div>
+
+	{
+		category.children.length > 0 && (
+			<div class="flex flex-col mx-6 border border-t-0 border-rd-gray-alpha-400 bg-rd-background-200 rounded-b-xl">
+				<div class="flex items-center gap-1 text-sm text-rd-gray-800 border-b border-dotted border-rd-gray-alpha-400 px-4 py-1">
+					<i class="fa-regular fa-diagram-subtask text-xs"></i>
+					<span>{__('subcategories')}</span>
+				</div>
+				<ul class="relative flex flex-col py-2 px-4 pt-1">
+					{category.children.map((child) => (
+						<CategoryNested category={child} />
+					))}
+				</ul>
+			</div>
+		)
+	}
+</li>

@@ -1,0 +1,346 @@
+---
+import { themeConfig } from '../config';
+import { __ } from '../i18n';
+
+const comment = themeConfig.comment;
+const system = comment.system;
+const config = comment.config;
+const singlePage = themeConfig.global.single_page !== false;
+
+const swupAttr = singlePage ? { 'data-swup-reload-script': '' } : {};
+
+const enabled =
+	comment.enable === true &&
+	(system === 'waline'
+		? Boolean(config.waline.serverUrl)
+		: system === 'gitalk'
+			? Boolean(config.gitalk.clientID && config.gitalk.owner && config.gitalk.repo)
+			: system === 'twikoo'
+				? Boolean(config.twikoo.server_url)
+				: system === 'giscus'
+					? Boolean(config.giscus.repo && config.giscus.repo_id && config.giscus.category_id)
+					: system === 'artalk'
+						? Boolean(config.artalk.server && config.artalk.site)
+						: system === 'utterances'
+							? Boolean(config.utterances.repo)
+							: false);
+
+const walineOptions = {
+	lang: config.waline.lang,
+	locale: config.waline.locale,
+	login: config.waline.login,
+	wordLimit: config.waline.wordLimit,
+	pageSize: config.waline.pageSize,
+	commentSorting: config.waline.commentSorting,
+	meta: config.waline.meta?.length ? config.waline.meta : undefined,
+	recaptchaV3Key: config.waline.recaptchaV3Key || undefined,
+	turnstileKey: config.waline.turnstileKey || undefined,
+};
+const walineEmoji = config.waline.emoji ?? [];
+const walineReaction = config.waline.reaction ?? false;
+
+const giscusConfig = {
+	repo: config.giscus.repo,
+	repo_id: config.giscus.repo_id,
+	category: config.giscus.category,
+	category_id: config.giscus.category_id,
+	mapping: config.giscus.mapping || 'pathname',
+	strict: String(config.giscus.strict || 0),
+	reactions_enabled: String(config.giscus.reactions_enabled || 1),
+	emit_metadata: String(config.giscus.emit_metadata || 0),
+	lang: config.giscus.lang || 'en',
+	input_position: config.giscus.input_position || 'bottom',
+	loading: config.giscus.loading || 'lazy',
+};
+
+const gitalkConfig = {
+	clientID: config.gitalk.clientID,
+	clientSecret: config.gitalk.clientSecret,
+	repo: config.gitalk.repo,
+	owner: config.gitalk.owner,
+	proxy: config.gitalk.proxy || 'https://github.com/login/oauth/access_token',
+	language: 'zh-CN',
+};
+
+const twikooConfig = {
+	version: config.twikoo.version,
+	server_url: config.twikoo.server_url,
+	region: config.twikoo.region,
+};
+
+const artalkConfig = {
+	server: config.artalk.server,
+	site: config.artalk.site,
+};
+
+const utterancesConfig = {
+	repo: config.utterances.repo,
+	issue_term: config.utterances.issue_term || 'pathname',
+	issue_number: config.utterances.issue_number || '',
+	label: config.utterances.label || '',
+	theme_light: config.utterances.theme_light || 'github-light',
+	theme_dark: config.utterances.theme_dark || 'github-dark',
+};
+---
+
+{
+	enabled && (
+		<section id="comments" class="comments mt-10 w-full" aria-labelledby="comments-title">
+			<h2 id="comments-title" class="my-1.5 w-full text-xl font-bold md:my-2.5 md:text-3xl">{__('comments')}</h2>
+
+			{
+				system === 'waline' && (
+					<>
+						<div id="waline"></div>
+						<script
+							type="module"
+							is:inline
+							{...swupAttr}
+							define:vars={{ walineServerUrl: config.waline.serverUrl, walineOptions, walineEmoji, walineReaction }}
+						>
+							import { init } from '/scripts/waline.js';
+							(function () {
+								const startPath = location.pathname;
+								const startTime = Date.now();
+								const runWaline = () => {
+									if (location.pathname !== startPath) return;
+									const container = document.getElementById('waline');
+									if (!container) {
+										if (Date.now() - startTime < 5000) setTimeout(runWaline, 200);
+										return;
+									}
+									if (window.redefineWalineInstance?.destroy) {
+										window.redefineWalineInstance.destroy();
+									}
+									container.innerHTML = '';
+									window.redefineWalineInstance = init({
+										el: '#waline',
+										serverURL: walineServerUrl,
+										path: location.pathname,
+										dark: 'html.dark',
+										reaction: walineReaction,
+										requiredMeta: ['nick', 'mail'],
+										emoji: walineEmoji,
+										lang: walineOptions.lang,
+										locale: walineOptions.locale,
+										login: walineOptions.login,
+										wordLimit: walineOptions.wordLimit,
+										pageSize: walineOptions.pageSize,
+										commentSorting: walineOptions.commentSorting,
+										meta: walineOptions.meta,
+										recaptchaV3Key: walineOptions.recaptchaV3Key,
+										turnstileKey: walineOptions.turnstileKey,
+									});
+								};
+								runWaline();
+							})();
+						</script>
+					</>
+				)
+			}
+
+			{
+				system === 'giscus' && (
+					<>
+						<div id="giscus-container"></div>
+						<script is:inline {...swupAttr} define:vars={{ giscusConfig }}>
+							(function () {
+								const container = document.getElementById('giscus-container');
+								if (!container) return;
+								if (container.querySelector('iframe.giscus-frame')) return;
+								if (container.dataset.giscusInit === 'true') return;
+								const script = document.createElement('script');
+								script.src = 'https://giscus.app/client.js';
+								script.setAttribute('data-repo', giscusConfig.repo);
+								script.setAttribute('data-repo-id', giscusConfig.repo_id);
+								script.setAttribute('data-category', giscusConfig.category);
+								script.setAttribute('data-category-id', giscusConfig.category_id);
+								script.setAttribute('data-mapping', giscusConfig.mapping);
+								script.setAttribute('data-strict', giscusConfig.strict);
+								script.setAttribute('data-reactions-enabled', giscusConfig.reactions_enabled);
+								script.setAttribute('data-emit-metadata', giscusConfig.emit_metadata);
+								script.setAttribute('data-theme', 'preferred_color_scheme');
+								script.setAttribute('data-lang', giscusConfig.lang);
+								script.setAttribute('data-input-position', giscusConfig.input_position);
+								script.setAttribute('data-loading', giscusConfig.loading);
+								script.crossOrigin = 'anonymous';
+								script.async = true;
+								container.appendChild(script);
+								container.dataset.giscusInit = 'true';
+							})();
+						</script>
+					</>
+				)
+			}
+
+			{
+				system === 'gitalk' && (
+					<>
+						<div id="gitalk-container"></div>
+						<script is:inline {...swupAttr} src="https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.min.js"></script>
+						<script is:inline {...swupAttr} define:vars={{ gitalkConfig }}>
+							(function () {
+								const startPath = location.pathname;
+								const startTime = Date.now();
+								const runGitalk = () => {
+									if (location.pathname !== startPath) return;
+									const container = document.getElementById('gitalk-container');
+									if (!container || typeof Gitalk === 'undefined') {
+										if (Date.now() - startTime < 5000) setTimeout(runGitalk, 200);
+										return;
+									}
+									container.innerHTML = '';
+									let pageKey = decodeURI(location.pathname);
+									if (pageKey.length > 50) pageKey = pageKey.substring(0, 47) + '...';
+									try {
+										new Gitalk({
+											clientID: gitalkConfig.clientID,
+											clientSecret: gitalkConfig.clientSecret,
+											repo: gitalkConfig.repo,
+											owner: gitalkConfig.owner,
+											admin: [gitalkConfig.owner],
+											id: pageKey,
+											language: gitalkConfig.language,
+											proxy: gitalkConfig.proxy,
+										}).render(container);
+									} catch (e) {
+										window.Gitalk = null;
+									}
+								};
+								runGitalk();
+							})();
+						</script>
+					</>
+				)
+			}
+
+			{
+				system === 'twikoo' && (
+					<>
+						<div class="twikoo-container">
+							<script is:inline {...swupAttr} src={`https://cdnjs.cloudflare.com/ajax/libs/twikoo/${twikooConfig.version}/twikoo.all.min.js`}></script>
+							<div id="twikoo-comment"></div>
+							<script is:inline {...swupAttr} define:vars={{ twikooConfig }}>
+								(function () {
+									const startPath = location.pathname;
+									const startTime = Date.now();
+									const runTwikoo = () => {
+										if (location.pathname !== startPath) return;
+										const container = document.getElementById('twikoo-comment');
+										if (!container || typeof twikoo === 'undefined') {
+											if (Date.now() - startTime < 5000) setTimeout(runTwikoo, 200);
+											return;
+										}
+										container.innerHTML = '';
+										twikoo.init({
+											el: '#twikoo-comment',
+											envId: twikooConfig.server_url,
+											region: twikooConfig.region || undefined,
+											path: location.pathname,
+										});
+									};
+									runTwikoo();
+								})();
+							</script>
+						</div>
+					</>
+				)
+			}
+
+			{
+				system === 'artalk' && (
+					<>
+						<div id="artalk-comment"></div>
+						<script is:inline {...swupAttr} define:vars={{ artalkConfig }}>
+							(function () {
+								const startPath = location.pathname;
+								const startTime = Date.now();
+
+								const ensureCss = () => {
+									if (document.getElementById('artalk-css')) return;
+									const link = document.createElement('link');
+									link.id = 'artalk-css';
+									link.rel = 'stylesheet';
+									link.href = 'https://cdn.jsdelivr.net/npm/artalk/dist/Artalk.css';
+									document.head.appendChild(link);
+								};
+								const ensureScript = () => {
+									if (document.getElementById('artalk-script')) return;
+									const script = document.createElement('script');
+									script.id = 'artalk-script';
+									script.src = 'https://cdn.jsdelivr.net/npm/artalk/dist/Artalk.js';
+									script.async = true;
+									document.body.appendChild(script);
+								};
+								const initArtalk = () => {
+									if (!window.Artalk) return false;
+									ensureCss();
+									try {
+										window.__artalk_instance && window.__artalk_instance.destroy?.();
+									} catch (e) {}
+									window.__artalk_instance = Artalk.init({
+										el: '#artalk-comment',
+										server: artalkConfig.server,
+										site: artalkConfig.site,
+									});
+									return true;
+								};
+								const runArtalk = () => {
+									if (location.pathname !== startPath) return;
+									const container = document.getElementById('artalk-comment');
+									if (!container) {
+										if (Date.now() - startTime < 5000) setTimeout(runArtalk, 200);
+										return;
+									}
+									if (initArtalk()) return;
+									ensureScript();
+									if (Date.now() - startTime < 5000) setTimeout(runArtalk, 200);
+								};
+								runArtalk();
+							})();
+						</script>
+					</>
+				)
+			}
+
+			{
+				system === 'utterances' && (
+					<>
+						<div
+							id="utterances-container"
+							data-utterances-theme-light={utterancesConfig.theme_light}
+							data-utterances-theme-dark={utterancesConfig.theme_dark}
+						>
+						</div>
+						<script is:inline {...swupAttr} define:vars={{ utterancesConfig }}>
+							(function () {
+								const container = document.getElementById('utterances-container');
+								if (!container) return;
+								const repo = utterancesConfig.repo;
+								const issueNumber = utterancesConfig.issue_number;
+								const issueTerm = utterancesConfig.issue_term;
+								const label = utterancesConfig.label;
+								if (!repo || (!issueNumber && !issueTerm)) return;
+								container.innerHTML = '';
+								const isDark = document.documentElement.classList.contains('dark');
+								const theme = isDark
+									? container.dataset.utterancesThemeDark || 'github-dark'
+									: container.dataset.utterancesThemeLight || 'github-light';
+								const script = document.createElement('script');
+								script.src = 'https://utteranc.es/client.js';
+								script.async = true;
+								script.crossOrigin = 'anonymous';
+								script.setAttribute('repo', repo);
+								if (issueNumber) script.setAttribute('issue-number', issueNumber);
+								else script.setAttribute('issue-term', issueTerm);
+								if (label) script.setAttribute('label', label);
+								script.setAttribute('theme', theme);
+								container.appendChild(script);
+							})();
+						</script>
+					</>
+				)
+			}
+		</section>
+	)
+}

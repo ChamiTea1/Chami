@@ -1,0 +1,62 @@
+---
+import { themeConfig } from '../config';
+import TocItem, { type TocNode } from './TocItem.astro';
+
+export interface TocHeading {
+	depth: number;
+	slug: string;
+	text: string;
+}
+
+interface Props {
+	headings: TocHeading[];
+	title: string;
+}
+
+const { headings, title } = Astro.props;
+
+const maxDepth = themeConfig.articles.toc.max_depth;
+const filtered = headings.filter((heading) => heading.depth >= 2 && heading.depth <= maxDepth);
+
+const buildTree = (items: TocHeading[]): TocNode[] => {
+	const roots: TocNode[] = [];
+	const stack: TocNode[] = [];
+	items.forEach((heading) => {
+		const node: TocNode = { heading, children: [] };
+		while (stack.length > 0 && stack[stack.length - 1].heading.depth >= heading.depth) {
+			stack.pop();
+		}
+		if (stack.length === 0) {
+			roots.push(node);
+		} else {
+			stack[stack.length - 1].children.push(node);
+		}
+		stack.push(node);
+	});
+	return roots;
+};
+
+const tree = buildTree(filtered);
+
+const useNumber = themeConfig.articles.toc.number === true;
+if (useNumber) {
+	const assignNumbers = (nodes: TocNode[], prefix: string) => {
+		nodes.forEach((node, index) => {
+			const number = `${prefix}${index + 1}.`;
+			(node as TocNode & { number?: string }).number = number;
+			if (node.children.length > 0) assignNumbers(node.children, number);
+		});
+	};
+	assignNumbers(tree, '');
+}
+---
+
+{
+	tree.length > 0 && (
+		<ol class="nav">
+			{tree.map((node) => (
+				<TocItem node={node} />
+			))}
+		</ol>
+	)
+}

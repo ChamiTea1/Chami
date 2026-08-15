@@ -1,0 +1,203 @@
+---
+import { siteConfig, themeConfig } from '../config';
+import { __ } from '../i18n';
+import Statistics from './Statistics.astro';
+
+interface Props {
+	isHome?: boolean;
+}
+
+const { isHome = false } = Astro.props;
+
+const sidebarLinks = themeConfig.home.sidebar.links;
+
+const currentPath = Astro.url.pathname;
+const isCurrent = (path: string) => {
+	if (path === '/' && currentPath.startsWith('/page/')) return true;
+	if (path === '/') return currentPath === '/';
+	return currentPath === path || currentPath.startsWith(path.replace(/\/$/, '') + '/');
+};
+---
+
+<header
+	id="navbar"
+	class:list={[
+		'navbar flex h-full w-full box-border items-center justify-center px-6 pt-0.5 font-display backdrop-blur-md [background:var(--nav-color-bg)] shadow-rd border border-rd-gray-alpha-400/30 md:px-12',
+	]}
+>
+	<div data-navbar-content data-navbar-width={isHome ? 'home' : 'pages'} class="relative z-30 flex h-full w-full flex-row items-center justify-between transition-[max-width] duration-300 ease-out">
+		<div class="flex items-center">
+			{themeConfig.defaults.logo && (
+				<a data-navbar-close class="mr-3 h-8 w-8 sm:h-10 sm:w-10" href="/">
+					<img src={themeConfig.defaults.logo} alt={siteConfig.title} class="h-full w-full rounded-sm" />
+				</a>
+			)}
+			<a data-navbar-close class="translate-y-px font-title text-xl leading-none font-medium text-rd-gray-1000 sm:text-2xl" href="/">
+				{isHome ? <h1 class="m-0 text-inherit leading-[inherit] font-[inherit]">{siteConfig.title}</h1> : siteConfig.title}
+			</a>
+		</div>
+
+		<div class="flex items-center">
+			<ul class="hidden items-center gap-6 md:flex">
+				{
+					themeConfig.navbar.links.map((link) => {
+						const hasSubmenus = Boolean(link.submenus?.length);
+						const isActive = isCurrent(link.path);
+						const linkText = __(link.label.toLowerCase()).toUpperCase();
+						return (
+							<li class:list={[hasSubmenus && 'navbar-dropdown group', 'relative cursor-pointer text-base font-medium text-rd-gray-1000']}>
+								{hasSubmenus ? (
+									<button type="button" class="navbar-link relative block p-1 text-rd-gray-1000 [&_i]:!text-inherit">
+										{link.icon && <i class={`${link.icon} fa-fw`}></i>}
+										{linkText}
+										<i class="navbar-chevron fa-solid fa-chevron-down fa-fw transition-transform duration-300"></i>
+									</button>
+								) : (
+									<a class="navbar-link relative block p-1 text-rd-gray-1000 [&_i]:!text-inherit" href={link.path} aria-current={isActive ? 'page' : undefined}>
+										{link.icon && <i class={`${link.icon} fa-fw`}></i>}
+										{linkText}
+									</a>
+								)}
+								{hasSubmenus && (
+									<ul class="invisible absolute left-1/2 max-h-0 w-auto -translate-x-1/2 overflow-hidden rounded-2xl bg-rd-background-100 px-2.5 text-center opacity-0 transition-all duration-200 ease-linear group-hover:visible group-hover:max-h-96 group-hover:border group-hover:border-rd-gray-alpha-400 group-hover:p-2.5 group-hover:opacity-100 group-focus-within:visible group-focus-within:max-h-96 group-focus-within:border group-focus-within:border-rd-gray-alpha-400 group-focus-within:p-2.5 group-focus-within:opacity-100">
+										{link.submenus?.map((submenu) => (
+											<li>
+												<a class="block whitespace-nowrap rounded-lg px-4 py-1 text-center text-base text-rd-gray-1000 transition-all duration-200 hover:bg-rd-gray-100 hover:text-primary" href={submenu.path}>
+													{__(submenu.label.toLowerCase()).toUpperCase()}
+												</a>
+											</li>
+										))}
+									</ul>
+								)}
+							</li>
+						);
+					})
+				}
+				{themeConfig.navbar.search.enable === true && (
+					<li class="ml-6">
+						<button
+							type="button"
+							data-search-trigger
+							aria-label={__('search')}
+							title={__('search')}
+							class="flex h-8 w-8 items-center justify-center text-2xl text-rd-gray-1000 hover:text-primary [&_i]:!text-inherit"
+						>
+							<i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+						</button>
+					</li>
+				)}
+			</ul>
+
+			<div class="flex items-center justify-between md:hidden">
+				{themeConfig.navbar.search.enable === true && (
+					<button
+						type="button"
+						data-search-trigger
+						aria-label={__('search')}
+						title={__('search')}
+						class="relative ml-3 flex h-5 w-5 items-center justify-center text-lg text-rd-gray-1000 first:ml-0 [&_i]:!text-inherit"
+					>
+						<i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+					</button>
+				)}
+				<button
+					id="navbar-toggle"
+					type="button"
+					aria-controls="navbar-drawer"
+					aria-expanded="false"
+					aria-label="Navigation"
+					title="Navigation"
+					class="relative ml-3 flex h-5 w-5 items-center justify-center text-rd-gray-1000 first:ml-0"
+				>
+					<span class="navbar-toggle-line" aria-hidden="true"></span>
+				</button>
+			</div>
+		</div>
+	</div>
+
+	<nav
+		id="navbar-drawer"
+		data-state="closed"
+		aria-hidden="true"
+		aria-label="Navigation"
+		class="absolute top-0 left-0 z-20 flex h-dvh w-full origin-top translate-x-full flex-col justify-between overflow-y-auto bg-rd-background-100 pt-[var(--navbar-height)] pb-5 transition-transform duration-300 ease-in-out data-[state=open]:translate-x-0"
+	>
+		<ul class="flex flex-col items-start justify-center px-4">
+			{
+				themeConfig.navbar.links.map((link, index) => {
+					const hasSubmenus = Boolean(link.submenus?.length);
+					const isActive = isCurrent(link.path);
+					const linkText = __(link.label.toLowerCase()).toUpperCase();
+					const submenuId = `navbar-submenu-${index}`;
+					return (
+						<li class="my-1.5 flex w-full flex-col text-base">
+							{hasSubmenus ? (
+								<button
+									type="button"
+									data-navbar-submenu
+									aria-controls={submenuId}
+									aria-expanded="false"
+									class="group flex w-full flex-row items-center justify-between gap-1 border-b border-rd-gray-alpha-400 px-2 py-1.5 text-2xl font-semibold text-rd-gray-1000 hover:border-primary hover:!text-primary active:!text-primary [&_i]:!text-inherit"
+								>
+									<span>{linkText}</span>
+									<i class="fa-solid fa-chevron-right fa-sm fa-fw transition-transform group-aria-expanded:rotate-90" aria-hidden="true"></i>
+								</button>
+							) : (
+								<a
+									data-navbar-close
+									class="flex w-full flex-row items-center justify-between gap-1 border-b border-rd-gray-alpha-400 px-2 py-1.5 text-2xl font-semibold text-rd-gray-1000 hover:border-primary hover:!text-primary active:!text-primary [&_i]:!text-inherit"
+									href={link.path}
+									aria-current={isActive ? 'page' : undefined}
+								>
+									<span>{linkText}</span>
+									{link.icon && <i class={`${link.icon} fa-sm fa-fw`} aria-hidden="true"></i>}
+								</a>
+							)}
+							{hasSubmenus && (
+								<div id={submenuId} class="flex-col items-start px-2 py-2" hidden>
+									{link.submenus?.map((submenu) => (
+										<div class="flex flex-col items-start justify-center rounded-3xl text-base hover:underline hover:underline-offset-1 active:underline">
+											<a data-navbar-close class="text-xl text-rd-gray-900" href={submenu.path}>
+												{__(submenu.label.toLowerCase()).toUpperCase()}
+											</a>
+										</div>
+									))}
+								</div>
+							)}
+						</li>
+					);
+				})
+			}
+			{
+				themeConfig.home.sidebar.show_on_mobile !== false &&
+				sidebarLinks
+					.filter((link) => !themeConfig.navbar.links.some((nav) => nav.label === link.label))
+					.map((link) => (
+						<li class="my-1.5 flex w-full flex-col text-base">
+							<a
+								data-navbar-close
+								class="flex w-full flex-row items-center justify-between gap-1 border-b border-rd-gray-alpha-400 px-2 py-1.5 text-2xl font-semibold text-rd-gray-1000 hover:border-primary hover:!text-primary active:!text-primary [&_i]:!text-inherit"
+								href={link.path}
+							>
+								<span>{__(link.label.toLowerCase()).toUpperCase()}</span>
+								{link.icon && <i class={`${link.icon} fa-sm fa-fw`} aria-hidden="true"></i>}
+							</a>
+						</li>
+					))
+			}
+		</ul>
+
+		<Statistics />
+	</nav>
+
+	<button
+		id="navbar-mask"
+		type="button"
+		data-state="closed"
+		aria-hidden="true"
+		aria-label="Close navigation"
+		tabindex="-1"
+		class="pointer-events-none invisible absolute top-0 z-10 h-dvh w-full bg-black/40 opacity-0 transition-opacity duration-300 ease-in-out data-[state=open]:pointer-events-auto data-[state=open]:visible data-[state=open]:opacity-100"
+	>
+	</button>
+</header>

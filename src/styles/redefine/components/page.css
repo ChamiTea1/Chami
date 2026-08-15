@@ -1,0 +1,35 @@
+@layer base {
+  body {
+    --current-navbar-height: 3.5rem;
+  }
+
+  body[data-navbar-size="compact"] {
+    --current-navbar-height: 2.5rem;
+  }
+
+  @variant sm {
+    body {
+      --current-navbar-height: 4rem;
+    }
+
+    body[data-navbar-size="compact"] {
+      --current-navbar-height: 2.75rem;
+    }
+  }
+
+  @variant md {
+    body {
+      --current-navbar-height: var(--navbar-height);
+    }
+
+    body[data-navbar-size="compact"] {
+      --current-navbar-height: var(--navbar-shrink-height);
+    }
+  }
+}
+
+@layer components {
+  .essay img {
+    cursor: zoom-in;
+  }
+}

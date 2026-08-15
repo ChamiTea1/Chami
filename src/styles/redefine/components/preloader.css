@@ -1,0 +1,12 @@
+@layer components {
+  [data-preloader-word] {
+    display: inline-flex;
+    flex-wrap: wrap;
+    white-space: nowrap;
+  }
+
+  [data-preloader-letter] {
+    display: inline-block;
+    line-height: 1em;
+  }
+}

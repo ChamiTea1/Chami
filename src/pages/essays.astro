@@ -1,0 +1,46 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageTitle from '../components/PageTitle.astro';
+import { themeConfig } from '../config';
+import { __ } from '../i18n';
+import { renderMarkdownString } from '../plugins/markdown-render';
+import essaysData from '../data/essays.json';
+
+const title = __('essays');
+
+const essays = (
+	await Promise.all(
+		essaysData.map(async (essay) => ({ ...essay, html: await renderMarkdownString(essay.content) })),
+	)
+).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+---
+
+<BaseLayout title={title}>
+	<div id="main-content" class="relative box-border h-full w-9/10 max-w-content transition-[max-width,width] duration-200 ease-in-out sm:w-6/7 md:w-4/5">
+		<div class="mb-4">
+			<PageTitle title={title} />
+			<ul class="mb-4 flex flex-col gap-6">
+				{essays.map((essay) => {
+					// essay.date 为无时区的本地时间，直接按本地解析，避免误按 UTC 造成 8 小时偏移。
+					const rawDate = new Date(essay.date.replace(' ', 'T')).toISOString().slice(0, 19).replace('T', ' ');
+					return (
+						<li class="relative flex w-full flex-row">
+							<div class="mr-4 size-10 shrink-0 overflow-hidden rounded-2xl border border-rd-gray-alpha-400 p-px">
+								<img src={themeConfig.defaults.avatar} alt="" class="h-full w-full rounded-[calc(1rem-1px)]" />
+							</div>
+							<div class="w-full overflow-hidden rounded-2xl rounded-tl-none border border-rd-gray-alpha-400">
+								<time data-essay-date datetime={rawDate} class="block border-b border-rd-gray-alpha-400 bg-zinc-50 px-4 py-1.5 text-sm text-rd-gray-900 dark:bg-zinc-800">
+									Loading Date...
+								</time>
+								<div class="essay markdown-body px-4 py-2" set:html={essay.html} />
+							</div>
+							<div class="absolute top-3 left-12 size-2 -rotate-45 transform border-t border-l border-solid border-rd-gray-alpha-400 bg-zinc-50 dark:bg-zinc-800"></div>
+						</li>
+					);
+				})}
+			</ul>
+		</div>
+	</div>
+
+	<script defer src="/scripts/moment-with-locales.min.js" data-swup-reload-script></script>
+</BaseLayout>

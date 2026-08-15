@@ -1,0 +1,26 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageTitle from '../../components/PageTitle.astro';
+import CategoryTree from '../../components/CategoryTree.astro';
+import { __ } from '../../i18n';
+import { getCategories } from '../../utils/collections';
+
+const posts = await getCollection('blog');
+const categories = getCategories(posts);
+const title = __('categories');
+---
+
+<BaseLayout title={title}>
+	<div id="main-content" class="relative box-border h-full w-9/10 max-w-content transition-[max-width,width] duration-200 ease-in-out sm:w-6/7 md:w-4/5">
+		<div class="mb-4 pt-5 sm:mb-6 sm:pt-0 md:mb-8">
+			<PageTitle title={title} showBorder />
+
+			<ul class="columns-1 gap-10 md:columns-2">
+				{categories.map((category) => (
+					<CategoryTree category={category} />
+				))}
+			</ul>
+		</div>
+	</div>
+</BaseLayout>

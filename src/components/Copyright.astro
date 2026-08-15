@@ -1,0 +1,88 @@
+---
+import { siteConfig, themeConfig } from '../config';
+import { __, formatDate } from '../i18n';
+import type { Post } from '../utils/collections';
+
+interface Props {
+	post: Post;
+}
+
+const { post } = Astro.props;
+const { data } = post;
+
+const licenses: Record<string, string> = {
+	all_rights_reserved: __('copyright.all_rights_reserved', siteConfig.author),
+	cc_by: __('copyright.license_content', '<a class="font-semibold hover:!text-primary" href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0</a>'),
+	cc_by_sa: __('copyright.license_content', '<a class="font-semibold hover:!text-primary" href="https://creativecommons.org/licenses/by-sa/4.0">CC BY-SA 4.0</a>'),
+	cc_by_nc: __('copyright.license_content', '<a class="font-semibold hover:!text-primary" href="https://creativecommons.org/licenses/by-nc/4.0">CC BY-NC 4.0</a>'),
+	cc_by_nd: __('copyright.license_content', '<a class="font-semibold hover:!text-primary" href="https://creativecommons.org/licenses/by-nd/4.0">CC BY-ND 4.0</a>'),
+	cc_by_nc_sa: __('copyright.license_content', '<a class="font-semibold hover:!text-primary" href="https://creativecommons.org/licenses/by-nc-sa/4.0">CC BY-NC-SA 4.0</a>'),
+	public_domain: __('copyright.public_domain'),
+};
+
+let licenseType: string | null = null;
+if (data.copyright && data.copyright !== '') {
+	licenseType = 'custom';
+} else if (data.license && licenses[data.license]) {
+	licenseType = data.license;
+} else if (themeConfig.articles.copyright.default && licenses[themeConfig.articles.copyright.default]) {
+	licenseType = themeConfig.articles.copyright.default;
+}
+
+const licenseHtml = licenseType === 'custom' ? (data.copyright as string) : licenseType ? licenses[licenseType] : '';
+
+const author = data.author || siteConfig.author;
+const isOriginal = !data.author || data.author === siteConfig.author;
+const dateTimeFormat = 'YYYY-MM-DD HH:mm:ss';
+const postUrl = `${siteConfig.url.replace(/\/$/, '')}/blog/${post.id}/`;
+
+
+const hasLicenseDetail = Boolean(licenseHtml) || Boolean(data.updatedDate && data.updatedDate.valueOf() !== data.pubDate.valueOf());
+---
+
+<div class="post-copyright relative mt-14 box-border w-full rounded-2xl border border-rd-gray-alpha-400 bg-rd-gray-100 px-5 pt-11 pb-5 text-center transition-colors duration-300 hover:border-rd-gray-800/30">
+	<a
+		href="/"
+		title={siteConfig.author}
+		class="absolute -top-8 left-1/2 size-16 -translate-x-1/2 overflow-hidden rounded-full border-2 border-rd-gray-alpha-400 bg-rd-background-100 shadow-rd"
+	>
+		<img src={themeConfig.defaults.avatar} alt={siteConfig.author} class="h-full w-full object-cover" />
+	</a>
+
+	<div class="text-xl font-bold text-rd-gray-1000">{author}</div>
+	<div class="mt-1 text-sm text-rd-gray-900">{siteConfig.subtitle}</div>
+
+	<div class="mt-3 flex items-center justify-center gap-2">
+		<span class="select-none rounded-lg bg-primary px-3 py-0.5 text-sm font-semibold text-rd-primary-text">
+			{isOriginal ? __('original') : __('reprint')}
+		</span>
+		<a
+			href={postUrl}
+			title={__('copyright.link')}
+			class="line-clamp-1 text-base font-medium text-rd-gray-1000 transition-colors hover:!text-primary"
+		>
+			{data.title}
+		</a>
+	</div>
+
+	{
+		hasLicenseDetail && (
+			<div class="mx-auto mt-3 flex max-w-fit flex-col items-start gap-1 rounded-xl border border-rd-gray-alpha-400 bg-rd-background-100 px-4 py-2 text-left text-xs text-rd-gray-900">
+				{data.updatedDate && data.updatedDate.valueOf() !== data.pubDate.valueOf() && (
+					<span class="flex items-center gap-1.5">
+						<span class="shrink-0">{__('copyright.update_time')}</span>
+						<time datetime={data.updatedDate.toISOString()}>{formatDate(data.updatedDate, dateTimeFormat)}</time>
+					</span>
+				)}
+				{
+					licenseHtml && (
+						<span class="flex items-center gap-1.5">
+							<span class="shrink-0">{__('copyright.license_title')}</span>
+							<span set:html={licenseHtml} />
+						</span>
+					)
+ 				}
+ 			</div>
+ 		)
+ 	}
+</div>

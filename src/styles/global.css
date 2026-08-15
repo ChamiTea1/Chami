@@ -1,0 +1,246 @@
+@layer theme, base, components, utilities;
+
+@import 'tailwindcss';
+@import 'katex/dist/katex.min.css';
+@import './redefine/base/variables.css';
+@import './redefine/base/global.css';
+@import './redefine/base/animations.css';
+@import './redefine/base/prose.css';
+@import './redefine/components/page.css';
+@import './redefine/components/navbar.css';
+@import './redefine/components/home.css';
+@import './redefine/components/footer.css';
+@import './redefine/components/paginator.css';
+@import './redefine/components/article.css';
+@import './redefine/components/archive.css';
+@import './redefine/components/tags.css';
+@import './redefine/components/progress.css';
+@import './redefine/components/folding.css';
+@import './redefine/components/callouts.css';
+@import './redefine/components/buttons.css';
+@import './redefine/components/resume.css';
+@import './redefine/components/code.css';
+@import './redefine/components/search.css';
+@import './redefine/components/image-viewer.css';
+@import './redefine/components/preloader.css';
+@import './redefine/plugins/aplayer.css';
+/* 评论系统样式改由 BaseLayout 按 comment.system 按需 <link> 加载 */
+
+@custom-variant dark (&:is(.dark *));
+
+@source "../**/*.astro";
+@source "../**/*.mdx";
+@source "../**/*.md";
+@source "../**/*.ts";
+
+@theme {
+	--font-display: 'Chillax-Variable', var(--font-chinese), sans-serif;
+	--font-title: var(--font-display);
+	--font-home: var(--font-display);
+
+	--text-default: 16px;
+
+	--leading-default: 1.5;
+}
+
+@theme inline {
+	--container-content: var(--content-max-width);
+	--container-content-with-toc: var(--content-with-toc-max-width);
+	--color-primary: var(--primary-color);
+	--color-rd-primary-text: var(--rd-primary-text);
+	--color-nav-color-1: var(--nav-color-1);
+	--color-nav-color-2: var(--nav-color-2);
+	--color-nav-color-bg: var(--nav-color-bg);
+	--color-rd-background-100: var(--rd-background-100);
+	--color-rd-background-200: var(--rd-background-200);
+	--color-rd-gray-100: var(--rd-gray-100);
+	--color-rd-gray-200: var(--rd-gray-200);
+	--color-rd-gray-300: var(--rd-gray-300);
+	--color-rd-gray-alpha-400: var(--rd-gray-alpha-400);
+	--color-rd-gray-800: var(--rd-gray-800);
+	--color-rd-gray-900: var(--rd-gray-900);
+	--color-rd-gray-1000: var(--rd-gray-1000);
+	--color-selection-color: var(--selection-color);
+	--color-scrollbar-color: var(--scrollbar-color);
+	--color-scrollbar-color-hover: var(--scrollbar-color-hover);
+	--color-scroll-bar-bg-color: var(--scroll-bar-bg-color);
+	--color-avatar-background-color: var(--avatar-background-color);
+	--color-note-blue-title-bg: var(--note-blue-title-bg);
+	--color-note-red-title-bg: var(--note-red-title-bg);
+	--color-note-cyan-title-bg: var(--note-cyan-title-bg);
+	--color-note-green-title-bg: var(--note-green-title-bg);
+	--color-note-yellow-title-bg: var(--note-yellow-title-bg);
+	--color-note-gray-title-bg: var(--note-gray-title-bg);
+	--color-note-type-title-bg: var(--note-type-title-bg);
+	--color-note-black-title-bg: var(--note-black-title-bg);
+	--color-note-purple-title-bg: var(--note-purple-title-bg);
+	--color-home-banner-text-color: var(--home-banner-text-color);
+	--shadow-rd: var(--rd-shadow);
+}
+
+@layer base {
+	ul,
+	ol,
+	li {
+		list-style: none;
+	}
+
+	a {
+		text-decoration: none;
+		color: var(--rd-gray-1000);
+	}
+
+	a i,
+	a span {
+		color: var(--rd-gray-1000);
+	}
+
+	a:hover,
+	a:active {
+		text-decoration: none;
+		color: var(--primary-color);
+	}
+
+	a:hover i,
+	a:hover span,
+	a:active i,
+	a:active span {
+		color: var(--primary-color);
+	}
+
+	button {
+		padding: 0;
+		margin: 0;
+		border: 0;
+		outline: none;
+		cursor: pointer;
+		background: transparent;
+	}
+}
+
+.scrollbar-hide {
+	-ms-overflow-style: none; /* IE and Edge */
+	scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+	display: none; /* Chrome, Safari and Opera */
+}
+
+/* ------------------------------------------------------------------ */
+/* Adaptations for Astro (Shiki code blocks)                            */
+/* ------------------------------------------------------------------ */
+
+@layer components {
+	.code-container pre.astro-code {
+		margin: 0;
+		padding: 10px 14px 14px;
+		font-size: 0.9rem !important;
+		line-height: 1.5rem;
+		tab-size: 4;
+	}
+
+	[data-code-style='mac'] .code-container pre.astro-code {
+		border-top: 1px solid var(--rd-gray-alpha-400);
+	}
+
+	.code-container .folded pre.astro-code {
+		display: none;
+	}
+
+	/* Shiki dual themes: switch to dark palette under .dark */
+	html.dark .astro-code,
+	html.dark .astro-code span {
+		color: var(--shiki-dark) !important;
+		background-color: var(--shiki-dark-bg) !important;
+		font-style: var(--shiki-dark-font-style) !important;
+		font-weight: var(--shiki-dark-font-weight) !important;
+		text-decoration: var(--shiki-dark-text-decoration) !important;
+	}
+
+	.markdown-body iframe {
+		width: 100%;
+	}
+
+	/* KaTeX 公式 */
+	.markdown-body .katex-display {
+		margin: 1.25rem 0;
+		padding: 0.75rem 1rem;
+		overflow-x: auto;
+		overflow-y: hidden;
+		border: 1px solid var(--rd-gray-alpha-400);
+		border-radius: 8px;
+	}
+
+	.dark .markdown-body .katex {
+		color: var(--rd-gray-1000);
+	}
+
+	/* Bilibili embed */
+	.bilibili-player {
+		position: relative;
+		width: 100%;
+		aspect-ratio: 16 / 9;
+		margin: 1.25rem 0;
+		overflow: hidden;
+		background: var(--rd-gray-100);
+		border: 1px solid var(--rd-gray-alpha-400);
+		border-radius: 12px;
+	}
+
+	.bilibili-player iframe {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		border: 0;
+	}
+
+	/* Inline APlayer (container) */
+	.aplayer-inline {
+		margin: 1.25rem 0;
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Inline APlayer card (non-layered overrides of bundled aplayer.css)  */
+/* ------------------------------------------------------------------ */
+
+.aplayer-inline .aplayer {
+	margin: 0;
+	overflow: visible;
+	background: var(--rd-background-100);
+	border: 1px solid var(--rd-gray-alpha-400);
+	border-radius: 16px;
+	box-shadow: var(--rd-shadow);
+	transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.2s ease;
+}
+
+.aplayer-inline .aplayer:hover {
+	transform: translateY(-3px);
+	box-shadow: 0 12px 36px rgb(0 0 0 / 10%);
+}
+
+.aplayer-inline .aplayer .aplayer-pic {
+	margin: 6px 0 6px 6px;
+	border-radius: 10px;
+}
+
+.aplayer-inline .aplayer .aplayer-info {
+	border: 0;
+	background: transparent;
+}
+
+.aplayer-inline .aplayer .aplayer-info .aplayer-music,
+.aplayer-inline .aplayer .aplayer-info .aplayer-music .aplayer-title {
+	color: var(--rd-gray-1000);
+}
+
+.aplayer-inline .aplayer .aplayer-info .aplayer-music .aplayer-author {
+	color: var(--rd-gray-900);
+}
+
+.dark .aplayer-inline .aplayer svg path,
+.dark .aplayer-inline .aplayer svg circle {
+	fill: var(--rd-gray-1000);
+}

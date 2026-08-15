@@ -1,0 +1,33 @@
+[
+	{
+		"links_category": "友情链接",
+		"has_thumbnail": false,
+		"list": [
+			{
+				"name": "EvanNotFound",
+				"link": "https://ohevan.com",
+				"description": "Redefine 主题作者",
+				"avatar": "https://avatars.githubusercontent.com/u/68590232"
+			},
+			{
+				"name": "Astro",
+				"link": "https://astro.build",
+				"description": "为内容驱动的网站而生的 Web 框架",
+				"avatar": ""
+			}
+		]
+	},
+	{
+		"links_category": "推荐站点",
+		"has_thumbnail": true,
+		"list": [
+			{
+				"name": "Redefine 演示站",
+				"link": "https://redefine.ohevan.com",
+				"description": "主题效果演示",
+				"avatar": "",
+				"thumbnail": "/images/wallhaven-wqery6-light.webp"
+			}
+		]
+	}
+]

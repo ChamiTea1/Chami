@@ -1,0 +1,68 @@
+---
+import { getCollection } from 'astro:content';
+import { siteConfig, themeConfig } from '../config';
+import { __ } from '../i18n';
+import { getWordCount } from '../utils/collections';
+
+const posts = await getCollection('blog');
+const sitePostsCount = posts.length;
+const siteWordCount = posts.reduce((sum, post) => sum + getWordCount(post.body ?? '').words, 0);
+const startYear = themeConfig.footer.start ? new Date(themeConfig.footer.start).getFullYear() : null;
+const currentYear = new Date().getFullYear();
+const showYearRange = startYear !== null && startYear !== currentYear;
+---
+
+<footer id="site-footer" class="footer relative mt-5 h-auto w-full py-5">
+	{
+		themeConfig.global.website_counter.enable && (
+			<script
+				defer
+				data-swup-reload-script
+				src={themeConfig.global.website_counter.url || 'https://vercount.one/js'}
+			></script>
+		)
+	}
+	<div class="grid grid-cols-1 items-center gap-2 px-5 py-3 text-center lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] lg:items-end lg:gap-6">
+		<div class="order-1 min-w-0 lg:col-start-2 lg:row-start-1">
+			{themeConfig.footer.customize && <div class="my-1" set:html={themeConfig.footer.customize} />}
+			<div>
+				&copy;
+				{showYearRange && <span>{startYear}</span>}
+				{showYearRange && <> - </>}
+				{currentYear}&nbsp;&nbsp;
+				<span set:html={themeConfig.footer.icon || '<i class="fa-regular fa-computer-classic"></i>'} />&nbsp;&nbsp;
+				<a href="/">{siteConfig.author}</a>
+				{themeConfig.footer.statistics && (
+					<p class="space-x-0.5">
+						<span>{__('site_posts', sitePostsCount)}</span>
+						<span>{__('site_wordcount', siteWordCount)}</span>
+					</p>
+				)}
+			</div>
+			{themeConfig.footer.icp.enable && themeConfig.footer.icp.number && (
+				<div class="my-1">
+					<a target="_blank" rel="nofollow" href={themeConfig.footer.icp.url || 'https://beian.miit.gov.cn'}>
+						{themeConfig.footer.icp.number}
+					</a>
+				</div>
+			)}
+			{themeConfig.footer.runtime && (
+				<div>
+					{__('runtime')} <span id="runtime_days"></span> {__('days')} <span id="runtime_hours"></span> {__('hours')}{' '}
+					<span id="runtime_minutes"></span> {__('minutes')} <span id="runtime_seconds"></span> {__('seconds')}
+				</div>
+			)}
+		</div>
+		<div class="order-3 min-w-0 lg:col-start-1 lg:row-start-1 flex flex-col items-center sm:items-start">
+			<div class="text-sm font-light">
+				<span set:html={__('powered_by', '<a target="_blank" class="text-sm" href="https://astro.build">Astro</a>')} />
+			</div>
+			<a class="text-sm flex items-center gap-1" target="_blank" href="https://github.com/EvanNotFound/hexo-theme-redefine">
+				<img src="/images/redefine-logo.svg" alt="" aria-hidden="true" class="size-4" />
+				<span>
+					{__('theme')}&nbsp;Redefine v{themeConfig.credit.theme_version}
+				</span>
+			</a>
+		</div>
+	</div>
+</footer>

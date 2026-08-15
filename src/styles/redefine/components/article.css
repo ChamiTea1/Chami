@@ -1,0 +1,107 @@
+@layer components {
+  .article-layout {
+    gap: 0;
+  }
+
+  .article-layout > .article {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .toc-card {
+    font-family: var(--font-article-title);
+    font-size: 0.92rem;
+  }
+
+  .toc-card:hover::-webkit-scrollbar-thumb {
+    border-color: rgb(183 183 183 / 30%);
+  }
+
+  .toc-card .toc-content::-webkit-scrollbar {
+    display: none;
+    width: 6px;
+    height: 6px;
+  }
+
+  .toc-card .toc-content::-webkit-scrollbar-track {
+    background: transparent;
+    border: 0;
+  }
+
+  .toc-card .toc-content::-webkit-scrollbar-thumb {
+    background-clip: content-box;
+    border: 3px solid transparent;
+    border-radius: 9999px;
+  }
+
+  .toc-card ol {
+    padding: 0 2px 12px 10px;
+    margin: 0;
+    text-align: left;
+    list-style: none;
+  }
+
+  .toc-card ol:last-child {
+    padding-bottom: 0;
+  }
+
+  .toc-card > ol,
+  .toc-card ol > ol {
+    padding-left: 0;
+  }
+
+  .toc-card ol ol {
+    border-left: 2px dotted var(--rd-gray-alpha-400);
+  }
+
+  .toc-card .nav-link {
+    transition: all 0.2s ease;
+  }
+
+  .toc-card .nav-item {
+    overflow: hidden;
+    font-size: 0.9rem;
+    line-height: 2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+  }
+
+  .toc-card[data-expand="false"] .nav-child {
+    display: none;
+  }
+
+  .toc-card[data-expand="true"] .nav-child,
+  .toc-card .nav-item[data-active="true"] > .nav-child {
+    display: block;
+  }
+
+  .toc-card :is(.nav-number, .nav-text) {
+    padding-left: 0;
+    color: var(--rd-gray-900);
+    transition: all 0.3s ease;
+  }
+
+  .toc-card .nav-item[data-active="true"] > .nav-link :is(.nav-number, .nav-text),
+  .toc-card .nav-link[aria-current="location"] :is(.nav-number, .nav-text) {
+    font-weight: bold;
+    color: var(--primary-color);
+  }
+
+  .toc-card .nav-link > span:first-child::before {
+    position: absolute;
+    width: 10px;
+    height: 1.7rem;
+    margin: auto 4px auto 0;
+    color: var(--primary-color);
+    content: " ";
+    border-left: 2px solid var(--primary-color);
+    opacity: 0;
+    transform: translate(-12px, 0);
+    transition: all 0.1s linear;
+  }
+
+  .toc-card .nav-link[aria-current="location"] > span:first-child::before {
+    opacity: 1;
+  }
+}

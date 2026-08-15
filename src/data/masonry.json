@@ -1,0 +1,9 @@
+[
+	{ "image": "/images/wallhaven-wqery6-light.webp", "title": "Mountain", "description": "A beautiful landscape", "width": 1920, "height": 1080 },
+	{ "image": "/images/wallhaven-wqery6-dark.webp", "title": "Night", "description": "Dark mode wallpaper", "width": 1920, "height": 1080 },
+	{ "image": "/images/redefine-og.webp", "title": "Cover", "description": "Theme cover image", "width": 1200, "height": 630 },
+	{ "image": "/images/redefine-logo.webp", "title": "Logo", "description": "Theme logo", "width": 400, "height": 400 },
+	{ "image": "/images/redefine-avatar.svg", "title": "Avatar", "description": "Theme avatar", "width": 400, "height": 400 },
+	{ "image": "/images/wallhaven-wqery6-light.webp", "title": "Mountain 2", "description": "Another view", "width": 1920, "height": 1080 },
+	{ "image": "/images/wallhaven-wqery6-dark.webp", "title": "Night 2", "description": "Another night view", "width": 1920, "height": 1080 }
+]

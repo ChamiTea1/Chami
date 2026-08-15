@@ -1,0 +1,76 @@
+---
+import { themeConfig } from '../config';
+import { __ } from '../i18n';
+
+const toolClass =
+	'flex size-10 shrink-0 items-center justify-center rounded-2xl border border-rd-gray-alpha-400 bg-rd-background-100 text-lg text-rd-gray-1000 shadow-rd hover:!bg-primary hover:!text-rd-primary-text sm:size-11 sm:text-xl [&_i]:!text-inherit';
+const showScrollTopInMenu = themeConfig.global.scroll_progress.percentage !== true;
+const gearRotation = themeConfig.global.side_tools.gear_rotation;
+---
+
+<aside
+	id="side-tools"
+	data-state="visible"
+	class="fixed right-3 bottom-6 z-30 opacity-100 transition-opacity duration-200 data-[state=hidden]:pointer-events-none data-[state=hidden]:opacity-0 motion-reduce:transition-none sm:right-10"
+>
+	<div class="flex flex-col items-end gap-1">
+		<div class="relative">
+			<div
+				id="side-tools-menu"
+				data-state="closed"
+				aria-hidden="true"
+				class="invisible absolute right-0 bottom-full mb-1 flex flex-col gap-1 opacity-0 pointer-events-none transition-opacity duration-200 ease-in-out data-[state=open]:visible data-[state=open]:opacity-100 data-[state=open]:pointer-events-auto motion-reduce:transition-none"
+			>
+				<button id="theme-toggle" data-side-tool type="button" class={toolClass} aria-label={__('theme')} title={__('theme')}>
+					<i class="fa-regular fa-moon" aria-hidden="true"></i>
+				</button>
+
+				{themeConfig.plugins.feed.enable && (
+					<a data-side-tool class={toolClass} href="/rss.xml" target="_blank" rel="noopener noreferrer" aria-label={__('rss_feed')} title={__('rss_feed')}>
+						<i class="fa-regular fa-rss" aria-hidden="true"></i>
+					</a>
+				)}
+
+				{showScrollTopInMenu && (
+					<button id="scroll-top" data-side-tool type="button" class={toolClass} aria-label={__('top')} title={__('top')}>
+						<i class="fa-regular fa-arrow-up" aria-hidden="true"></i>
+					</button>
+				)}
+
+				<button id="scroll-bottom" data-side-tool type="button" class={toolClass} aria-label={__('bottom')} title={__('bottom')}>
+					<i class="fa-regular fa-arrow-down" aria-hidden="true"></i>
+				</button>
+			</div>
+
+			<button
+				id="side-tools-toggle"
+				data-side-tool
+				type="button"
+				class={toolClass}
+				aria-controls="side-tools-menu"
+				aria-expanded="false"
+				aria-label="Tools"
+				title="Tools"
+			>
+				<i class:list={['fa-regular fa-cog', gearRotation && 'fa-spin']} aria-hidden="true"></i>
+			</button>
+		</div>
+
+		{
+			!showScrollTopInMenu && (
+				<button
+					id="scroll-top"
+					data-side-tool
+					type="button"
+					data-state="hidden"
+					class:list={['group', toolClass, 'data-[state=hidden]:hidden']}
+					aria-label={__('top')}
+					title={__('top')}
+				>
+					<i data-scroll-arrow class="fas fa-arrow-up !hidden group-hover:!flex" aria-hidden="true"></i>
+					<span data-scroll-percent class="flex text-base group-hover:!hidden"></span>
+				</button>
+			)
+		}
+	</div>
+</aside>

@@ -1,0 +1,76 @@
+---
+import { Image } from 'astro:assets';
+import { __ } from '../i18n';
+import { normalizePostCover, type Post } from '../utils/collections';
+
+interface Props {
+	prev: Post | null;
+	next: Post | null;
+}
+
+const { prev, next } = Astro.props;
+
+const fallbackImage = '/images/wallhaven-wqery6-light.webp';
+
+const prevCover = prev ? normalizePostCover(prev.data) : false;
+const nextCover = next ? normalizePostCover(next.data) : false;
+---
+
+{
+	(prev || next) && (
+		<nav class="pagination-post my-8 flex w-full flex-col gap-4 px-2 sm:px-6 md:px-8 lg:flex-row" aria-label="Post navigation">
+			{
+				prev && (
+					<div class="group min-w-0 flex-1 overflow-hidden rounded-2xl border border-rd-gray-alpha-400 bg-rd-background-100 transition-colors duration-300 hover:border-primary/40">
+						<a href={`/blog/${prev.id}/`} rel="prev" class="flex h-full items-stretch">
+							<div class="relative h-24 w-32 shrink-0 overflow-hidden sm:h-28 sm:w-40">
+								{typeof prevCover === 'string' ? (
+									<img src={prevCover} alt={prev.data.title} class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 dark:brightness-75" />
+								) : prevCover && typeof prevCover === 'object' && 'src' in prevCover ? (
+									<Image src={prevCover} alt={prev.data.title} class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 dark:brightness-75" />
+								) : (
+									<img src={fallbackImage} alt="" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 dark:brightness-75" />
+								)}
+							</div>
+							<div class="flex min-w-0 flex-1 flex-col justify-center gap-1 px-4 py-3">
+								<span class="flex items-center gap-1.5 text-xs text-rd-gray-900">
+									<i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+									{__('prev_posts')}
+								</span>
+								<span class="line-clamp-2 text-base font-medium text-rd-gray-1000 transition-colors group-hover:!text-primary">
+									{prev.data.title}
+								</span>
+							</div>
+						</a>
+					</div>
+				)
+			}
+			{
+				next && (
+					<div class="group min-w-0 flex-1 overflow-hidden rounded-2xl border border-rd-gray-alpha-400 bg-rd-background-100 transition-colors duration-300 hover:border-primary/40">
+						<a href={`/blog/${next.id}/`} rel="next" class="flex h-full items-stretch">
+							<div class="flex min-w-0 flex-1 flex-col items-end justify-center gap-1 px-4 py-3 text-right">
+								<span class="flex items-center gap-1.5 text-xs text-rd-gray-900">
+									{__('next_posts')}
+									<i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+								</span>
+								<span class="line-clamp-2 text-base font-medium text-rd-gray-1000 transition-colors group-hover:!text-primary">
+									{next.data.title}
+								</span>
+							</div>
+							<div class="relative h-24 w-32 shrink-0 overflow-hidden sm:h-28 sm:w-40">
+								{typeof nextCover === 'string' ? (
+									<img src={nextCover} alt={next.data.title} class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 dark:brightness-75" />
+								) : nextCover && typeof nextCover === 'object' && 'src' in nextCover ? (
+									<Image src={nextCover} alt={next.data.title} class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 dark:brightness-75" />
+								) : (
+									<img src={fallbackImage} alt="" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 dark:brightness-75" />
+								)}
+							</div>
+						</a>
+					</div>
+				)
+			}
+		</nav>
+	)
+}

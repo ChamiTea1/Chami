@@ -1,0 +1,65 @@
+---
+import { __ } from '../i18n';
+import type { Post } from '../utils/collections';
+
+interface Props {
+	posts: Post[];
+}
+
+const { posts } = Astro.props;
+
+const years = [...new Set(posts.map((post) => post.data.pubDate.getFullYear()))].sort((a, b) => b - a);
+const byYear = years.map((year) => ({
+	year,
+	postList: posts
+		.filter((post) => post.data.pubDate.getFullYear() === year)
+		.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf() || a.data.title.localeCompare(b.data.title)),
+}));
+---
+
+<div>
+	{
+		byYear.map((postYear) => {
+			const groups: { key: string; date: Date; posts: Post[] }[] = [];
+			postYear.postList.forEach((post) => {
+				const key = post.data.pubDate.toISOString().slice(0, 10);
+				let group = groups[groups.length - 1];
+				if (!group || group.key !== key) {
+					group = { key, date: post.data.pubDate, posts: [] };
+					groups.push(group);
+				}
+				group.posts.push(post);
+			});
+			return (
+				<section class="mb-10 last:mb-0">
+					<h2 class="mb-3 flex items-center gap-4">
+						<span class="text-2xl sm:text-3xl font-semibold">{postYear.year}</span>
+						<span class="text-2xl sm:text-3xl font-light text-rd-gray-800 tracking-tight">
+							{postYear.postList.length} {postYear.postList.length === 1 ? __('post') : __('posts')}
+						</span>
+					</h2>
+					<ol class="timeline pl-2 md:pl-8">
+						{groups.map((group) => (
+							<li class="timeline-entry relative border-l border-rd-gray-alpha-400 pb-6 pl-6 last:pb-2">
+								<div class="mb-2 text-sm font-semibold text-rd-gray-900">
+									{group.date.toLocaleDateString('en-us', { month: 'short', day: 'numeric' })}
+								</div>
+								<ul class="space-y-1.5">
+									{group.posts.map((post) => (
+										<li class="timeline-post relative">
+											<a href={`/blog/${post.id}/`} class="block w-fit max-w-full">
+												<span class="block text-lg leading-snug text-rd-gray-1000 [overflow-wrap:anywhere] md:text-xl">
+													{post.data.title}
+												</span>
+											</a>
+										</li>
+									))}
+								</ul>
+							</li>
+						))}
+					</ol>
+				</section>
+			);
+		})
+	}
+</div>

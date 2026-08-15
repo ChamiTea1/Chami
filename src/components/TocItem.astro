@@ -1,0 +1,29 @@
+---
+import type { TocHeading } from './Toc.astro';
+
+export interface TocNode {
+	heading: TocHeading;
+	children: TocNode[];
+	number?: string;
+}
+
+interface Props {
+	node: TocNode;
+}
+
+const { node } = Astro.props;
+---
+
+<li class:list={[`nav-item nav-level-${node.heading.depth}`, node.children.length > 0 && 'nav-item-child']}>
+	<a class="nav-link" href={`#${node.heading.slug}`}>
+		{node.number && <span class="nav-number">{node.number}</span>}
+		<span class="nav-text">{node.heading.text}</span>
+	</a>
+	{node.children.length > 0 && (
+		<ol class="nav-child">
+			{node.children.map((child) => (
+				<Astro.self node={child} />
+			))}
+		</ol>
+	)}
+</li>

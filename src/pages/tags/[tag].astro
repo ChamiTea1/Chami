@@ -1,0 +1,28 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageTitle from '../../components/PageTitle.astro';
+import PostsList from '../../components/PostsList.astro';
+import { getTags, sortPosts, type Post } from '../../utils/collections';
+
+export async function getStaticPaths() {
+	const posts = await getCollection('blog');
+	const tags = getTags(posts);
+	return tags.map((tag) => ({
+		params: { tag: tag.slug },
+		props: { tag, posts: sortPosts(tag.posts) },
+	}));
+}
+
+const { tag, posts } = Astro.props as { tag: { name: string }; posts: Post[] };
+const title = tag.name;
+---
+
+<BaseLayout title={title}>
+	<div id="main-content" class="relative box-border h-full w-9/10 max-w-content transition-[max-width,width] duration-200 ease-in-out sm:w-6/7 md:w-4/5">
+		<div class="mb-4 pt-5 sm:mb-6 sm:pt-0 md:mb-8">
+			<PageTitle title={title} showBorder iconClass="fa-regular fa-hashtag text-rd-gray-800" />
+			<PostsList posts={posts} />
+		</div>
+	</div>
+</BaseLayout>

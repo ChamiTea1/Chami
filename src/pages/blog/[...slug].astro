@@ -1,0 +1,284 @@
+---
+import { Image } from 'astro:assets';
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Copyright from '../../components/Copyright.astro';
+import PostAside from '../../components/PostAside.astro';
+import Comments from '../../components/Comments.astro';
+import PostPagination from '../../components/PostPagination.astro';
+import { siteConfig, themeConfig, getAuthorLabel } from '../../config';
+import { __, i18n, formatDate } from '../../i18n';
+import { sortPosts, getWordCount, normalizePostCover, type Post } from '../../utils/collections';
+import { getLocalImageSize } from '../../plugins/rehype-image-size';
+
+export async function getStaticPaths() {
+	const posts = await getCollection('blog');
+	return posts.map((post) => ({
+		params: { slug: post.id },
+		props: { post },
+	}));
+}
+
+const { post } = Astro.props as { post: Post };
+const { Content, headings } = await render(post);
+const { data } = post;
+
+const sorted = sortPosts(await getCollection('blog'));
+const index = sorted.findIndex((p) => p.id === post.id);
+const prevPost = index > 0 ? sorted[index - 1] : null;
+const nextPost = index >= 0 && index < sorted.length - 1 ? sorted[index + 1] : null;
+
+const cover = normalizePostCover(data);
+const showCover = cover !== false;
+const coverDims = typeof cover === 'string' ? await getLocalImageSize(cover) : null;
+const coverIsPortrait = Boolean(coverDims && coverDims.height > coverDims.width);
+const author = (typeof data.author === 'string' && data.author) || siteConfig.author;
+
+const authorLabel = themeConfig.articles.author_label.enable === true ? getAuthorLabel(sorted.length) : '';
+
+const { words, minutes } = getWordCount(post.body ?? '');
+
+const tags = Array.isArray(data.tags) ? data.tags : data.tags ? [data.tags] : [];
+const tagUrl = (tag: string) => `/tags/${encodeURIComponent(tag.toLowerCase())}/`;
+const categories = Array.isArray(data.categories) ? data.categories : data.categories ? [data.categories] : [];
+const categoryUrl = (cat: string) => `/categories/${cat.split('/').map(encodeURIComponent).join('/')}/`;
+
+const tocEnabled = themeConfig.articles.toc.enable === true && data.toc !== false;
+
+
+const toolClass =
+	'mb-1 size-10 cursor-pointer items-center justify-center rounded-2xl border border-rd-gray-alpha-400 bg-rd-background-100 text-lg text-rd-gray-1000 shadow-rd last:mb-0 hover:bg-primary hover:text-rd-primary-text sm:size-11 sm:text-xl [&_i]:!text-inherit';
+
+const description = data.description || data.og_description;
+const ogImage = typeof data.og_image === 'string' ? data.og_image : undefined;
+const showComments = themeConfig.comment.enable === true && data.comment !== false;
+const showExpires = Boolean(data.expires);
+const expiresLabel = i18n.expired;
+const updatedIso = (data.updatedDate ?? data.pubDate).toISOString();
+---
+
+<BaseLayout title={data.title} description={description} image={ogImage}>
+	{
+		showCover && (
+			<div slot="banner" aria-hidden="true" class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+				{typeof cover === 'string' ? (
+					<img
+						src={cover}
+						alt=""
+						class="h-full w-full scale-125 object-cover blur-[16px] dark:brightness-75 dark:saturate-[0.85]"
+					/>
+				) : (
+					<Image
+						src={cover}
+						alt=""
+						class="h-full w-full scale-125 object-cover blur-[16px] dark:brightness-75 dark:saturate-[0.85]"
+					/>
+				)}
+				<div
+					class="absolute inset-0 dark:hidden"
+					style="background: linear-gradient(to bottom, color-mix(in srgb, var(--rd-background-100) 22%, transparent), color-mix(in srgb, var(--rd-background-100) 62%) 55%, var(--rd-background-100) 100%);"
+				></div>
+				<div
+					class="absolute inset-0 hidden dark:block"
+					style="background: linear-gradient(to bottom, color-mix(in srgb, var(--rd-background-100) 40%, transparent), color-mix(in srgb, var(--rd-background-100) 72%) 55%, var(--rd-background-100) 100%);"
+				></div>
+			</div>
+		)
+	}
+
+	<div
+		id="main-content"
+		class="relative box-border h-full w-9/10 max-w-content transition-[max-width,width] duration-200 ease-in-out sm:w-6/7 md:w-4/5 min-[1200px]:w-auto min-[1200px]:max-w-content-with-toc"
+	>
+		<div
+			id="article-layout"
+			class="article-layout relative flex h-full w-full box-border justify-between overflow-x-hidden sm:overflow-x-visible min-[1200px]:gap-6"
+		>
+			<article
+				class="article box-border mb-4 max-w-screen rounded-none border-0 bg-rd-background-100 px-1 py-5 shadow-none transition-[width] duration-200 ease-in-out sm:mb-8 sm:max-w-none sm:rounded-2xl sm:border sm:border-rd-gray-alpha-400 sm:p-0 sm:shadow-rd"
+			>
+				{
+					showCover && (
+						<header class="relative w-full overflow-hidden rounded-none sm:rounded-t-[calc(1rem-1px)]">
+							{typeof cover === 'string' ? (
+								<img
+									src={cover}
+									alt={data.title}
+									class:list={[
+										'w-full dark:brightness-75',
+										coverIsPortrait
+											? 'h-72 object-contain object-top sm:h-96 md:h-[26rem]'
+											: 'h-60 object-cover sm:h-72 md:h-80',
+									]}
+								/>
+							) : (
+								<Image src={cover} alt={data.title} class="h-60 w-full object-cover dark:brightness-75 sm:h-72 md:h-80" />
+							)}
+						</header>
+					)
+				}
+
+				{/* 文章头：分类/标签 → 标题 → 作者/时间（参考 LuviciiBlog 排布） */}
+				<div class="px-2 pt-6 sm:px-8 md:px-10">
+					{
+						(categories.length > 0 || tags.length > 0) && (
+							<div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+								{categories.map((cat) => (
+									<a href={categoryUrl(cat)} class="rounded px-1.5 text-rd-gray-900 transition-colors hover:!bg-rd-gray-200 hover:!text-primary">
+										{cat}
+									</a>
+								))}
+								{tags.map((tag) => (
+									<a href={tagUrl(tag)} tabindex="-1" class="rounded px-1.5 text-rd-gray-900 transition-colors hover:!bg-rd-gray-200 hover:!text-primary">
+										{tag}
+									</a>
+								))}
+							</div>
+						)
+					}
+
+					<h1 class="mt-3 mb-3 text-3xl leading-snug font-bold tracking-tight text-rd-gray-1000 md:text-4xl">
+						{data.title}
+					</h1>
+
+					<div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-rd-gray-900">
+						<span class="font-medium text-rd-gray-1000">{author}</span>
+						{authorLabel && (
+							<span class="rounded-sm border border-rd-gray-alpha-400 px-1.5 py-0.5 text-xs">{authorLabel}</span>
+						)}
+						<time datetime={data.pubDate.toISOString()} title={`${__('create_time')} ${formatDate(data.pubDate, 'YYYY-MM-DD HH:mm:ss')}`}>
+							{formatDate(data.pubDate, 'YYYY-MM-DD')}
+						</time>
+						{data.updatedDate && data.updatedDate.valueOf() !== data.pubDate.valueOf() && (
+							<time datetime={data.updatedDate.toISOString()} title={`${__('update_time')} ${formatDate(data.updatedDate, 'YYYY-MM-DD HH:mm:ss')}`}>
+								{formatDate(data.updatedDate, 'YYYY-MM-DD')}
+							</time>
+						)}
+						{
+							(themeConfig.articles.word_count.enable && (
+								<span class="flex items-center gap-1.5">
+									<i class="fa-regular fa-file-word" aria-hidden="true"></i>
+									{__('post_wordcount')}: {words}
+								</span>
+							))
+						}
+						{
+							(themeConfig.articles.word_count.enable && themeConfig.articles.word_count.min2read && (
+								<span class="flex items-center gap-1.5">
+									<i class="fa-regular fa-clock" aria-hidden="true"></i>
+									{__('post_min2read')}: {minutes} {__('min2read')}
+								</span>
+							))
+						}
+						{
+							(themeConfig.global.website_counter.enable && themeConfig.global.website_counter.post_pv && (
+								<span class="flex items-center gap-1.5">
+									<i class="fa-regular fa-eye" aria-hidden="true"></i>
+									{__('post_page_pv')}: <span id="busuanzi_value_page_pv"></span>
+								</span>
+							))
+						}
+					</div>
+				</div>
+
+				{
+					showExpires && (
+						<aside
+							class="article-expire callout relative mx-2 mt-4 mb-4 flex flex-row items-center gap-2 rounded-xl border border-rd-gray-alpha-400 bg-(--callout-bg-color) p-3 pl-1 sm:mx-6 md:mx-8"
+							id="expiration-container"
+							data-kind="simple"
+							data-variant="red"
+							data-expires={data.expires!.toISOString()}
+							data-updated={updatedIso}
+							role="note"
+							hidden
+						>
+							<div aria-hidden="true" class="w-0.5 shrink-0 self-stretch rounded-full bg-(--callout-primary-color) opacity-60"></div>
+							<i class="expire-icon fa-solid fa-timer shrink-0 text-base text-(--callout-primary-color)" aria-hidden="true"></i>
+							<div class="markdown-body min-w-0 flex-1">
+								<span class="expire-label text-(--callout-primary-color)" id="expiration-date">{expiresLabel}</span>
+							</div>
+						</aside>
+					)
+				}
+
+				<div class="markdown-body mt-10 border-b border-rd-gray-alpha-400 px-2 pb-8 text-rd-gray-1000 [overflow-wrap:break-word] sm:px-6 md:px-8">
+					<Content />
+				</div>
+
+				{
+					themeConfig.articles.copyright.enable && (
+						<div class="my-8 w-full px-2 sm:px-6 md:px-8">
+							<Copyright post={post} />
+						</div>
+					)
+				}
+
+				{
+					tags.length > 0 && (
+						<div class="mt-6 flex flex-wrap items-center justify-center gap-2 px-2 sm:px-6 md:px-8">
+							{tags.map((tag) => (
+								<a
+									href={tagUrl(tag)}
+									class="flex items-center gap-1 rounded-lg border border-rd-gray-alpha-400 bg-rd-background-100 px-3 py-1.5 text-sm text-rd-gray-900 transition-colors hover:!border-primary hover:!text-primary"
+								>
+									<i class="fa-regular fa-tag" aria-hidden="true"></i>
+									{tag}
+								</a>
+							))}
+						</div>
+					)
+				}
+
+				<PostPagination prev={prevPost} next={nextPost} />
+				{
+					showComments && (
+						<div class="px-2 pb-8 sm:px-6 md:px-8">
+							<Comments />
+						</div>
+					)
+				}
+			</article>
+
+			<PostAside headings={headings} title={data.title} author={author} post={post} showToc={tocEnabled} />
+		</div>
+	</div>
+
+	{
+		tocEnabled && (
+			<aside
+				slot="after-shell"
+				class="fixed right-4 bottom-28 z-30 transition-[top] duration-200 ease-in-out sm:right-6 min-[1200px]:hidden"
+			>
+				<div class="flex flex-col items-end gap-1">
+					<button
+						id="toc-toggle"
+						type="button"
+						hidden
+						aria-controls="article-toc"
+						aria-expanded="false"
+						aria-label={__('toc')}
+						title={__('toc')}
+						class:list={['flex', toolClass]}
+					>
+						<i class="fa-regular fa-bars" aria-hidden="true"></i>
+					</button>
+					{
+						showComments && (
+							<button
+								id="comment-jump"
+								type="button"
+								aria-controls="comments"
+								aria-label={__('comments')}
+								title={__('comments')}
+								class:list={['flex', toolClass]}
+							>
+								<i class="fa-regular fa-comments" aria-hidden="true"></i>
+							</button>
+						)
+					}
+				</div>
+			</aside>
+		)
+	}
+</BaseLayout>

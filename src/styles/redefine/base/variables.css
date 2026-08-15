@@ -1,0 +1,76 @@
+@layer theme {
+  :root {
+    --navbar-height: 4.5rem;
+    --navbar-shrink-height: 3rem;
+    --font-default: Geist Variable, Noto Sans SC, -apple-system, system-ui,
+      Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif,
+      BlinkMacSystemFont, Helvetica Neue, PingFang SC, Hiragino Sans GB,
+      Microsoft YaHei, Arial;
+    --font-english: Geist Variable, sans-serif;
+    --font-chinese: -apple-system, BlinkMacSystemFont, PingFang SC,
+      Microsoft YaHei, Heiti SC, WenQuanYi Micro Hei, sans-serif;
+    --font-article-title: var(--font-english), var(--font-chinese),
+      Noto Sans SC, sans-serif;
+    --code-font: Geist Mono;
+    --nav-color-bg: linear-gradient(
+      120deg,
+      var(--nav-color-1),
+      var(--nav-color-2)
+    );
+  }
+
+  :root,
+  .light {
+    --rd-background-100: #fff;
+    --rd-background-200: #fafafa;
+    --rd-gray-100: #f7f7f8;
+    --rd-gray-200: #f2f3f4;
+    --rd-gray-300: #eef0f2;
+    --rd-gray-alpha-400: rgb(0 0 0 / 10%);
+    --rd-gray-800: #778084;
+    --rd-gray-900: #5c6669;
+    --rd-gray-1000: #343a3c;
+    --scrollbar-color: #c1c1c1;
+    --scrollbar-color-hover: #a1a1a1;
+    --scroll-bar-bg-color: #fafafa;
+    --scroll-bar-bg-color-hover: #e6e6e6;
+    --avatar-background-color: #06c;
+    --note-blue-title-bg: #d6f7fb;
+    --note-red-title-bg: #fde9e9;
+    --note-cyan-title-bg: #e9fdf9;
+    --note-green-title-bg: #e9fde9;
+    --note-yellow-title-bg: #fdf9e9;
+    --note-gray-title-bg: #f9f9f9;
+    --note-type-title-bg: #fdf3e9;
+    --note-black-title-bg: #e9e9e9;
+    --note-purple-title-bg: #f9e9fd;
+    --rd-shadow: 0 6px 24px rgb(0 0 0 / 6%);
+  }
+
+  .dark {
+    --rd-background-100: #202124;
+    --rd-background-200: #242529;
+    --rd-gray-100: #27282c;
+    --rd-gray-200: #2a2c30;
+    --rd-gray-300: #2d2f34;
+    --rd-gray-alpha-400: rgb(255 255 255 / 8%);
+    --rd-gray-800: #778084;
+    --rd-gray-900: #9595a2;
+    --rd-gray-1000: #cbcbd1;
+    --scrollbar-color: #898989;
+    --scrollbar-color-hover: #a1a1a1;
+    --scroll-bar-bg-color: #2a2c30;
+    --scroll-bar-bg-color-hover: #3a3d42;
+    --avatar-background-color: #005cb8;
+    --note-blue-title-bg: #1e3e46;
+    --note-red-title-bg: #4e1e1e;
+    --note-cyan-title-bg: #1e4e4e;
+    --note-green-title-bg: #1e4e1e;
+    --note-yellow-title-bg: #4e4e1e;
+    --note-gray-title-bg: #4e4e4e;
+    --note-type-title-bg: #4e3a1e;
+    --note-black-title-bg: #1e1e1e;
+    --note-purple-title-bg: #4e1e4e;
+    --rd-shadow: 0 6px 24px rgb(0 0 0 / 25%);
+  }
+}

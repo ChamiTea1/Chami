@@ -1,0 +1,69 @@
+---
+import { siteConfig, themeConfig } from '../config';
+import { __ } from '../i18n';
+import Toc, { type TocHeading } from './Toc.astro';
+import Recommendation from './Recommendation.astro';
+import type { Post } from '../utils/collections';
+
+interface Props {
+	headings: TocHeading[];
+	title: string;
+	author: string;
+	post: Post;
+	showToc?: boolean;
+}
+
+const { headings, title, author, post, showToc = true } = Astro.props;
+---
+
+<aside class="post-aside max-[1199px]:contents min-[1200px]:flex min-[1200px]:w-[300px] min-[1200px]:shrink-0 min-[1200px]:flex-col">
+	{/* 作者卡片 */}
+	<div class="hidden min-[1200px]:block rounded-2xl border border-rd-gray-alpha-400 bg-rd-background-100 p-5 shadow-rd">
+		<div class="flex items-center gap-3">
+			<img
+				src={themeConfig.defaults.avatar}
+				alt={author}
+				class="size-12 shrink-0 rounded-full border border-rd-gray-alpha-400 object-cover"
+			/>
+			<div class="min-w-0">
+				<div class="truncate text-lg font-bold text-rd-gray-1000">{author}</div>
+				<div class="truncate text-xs text-rd-gray-900">{siteConfig.subtitle}</div>
+			</div>
+		</div>
+	</div>
+
+	{/* 目录 + 推荐阅读：桌面整体 sticky 跟随，移动端目录变右下角浮窗 */}
+	<div
+		class:list={[
+			'max-[1199px]:contents',
+			'min-[1200px]:mt-5 min-[1200px]:flex min-[1200px]:max-h-[calc(100vh-var(--current-navbar-height)-3rem)] min-[1200px]:flex-col',
+			'min-[1200px]:sticky min-[1200px]:top-[calc(var(--current-navbar-height)+1.5rem)]',
+		]}
+	>
+		{
+			showToc && (
+				<div
+					id="article-toc"
+					data-state="closed"
+					data-expand={String(themeConfig.articles.toc.expand === false ? 'false' : 'true')}
+					class:list={[
+						'toc-card box-border overflow-hidden rounded-2xl border border-rd-gray-alpha-400 bg-rd-background-100 shadow-rd',
+						'max-[1199px]:fixed max-[1199px]:right-4 max-[1199px]:bottom-28 max-[1199px]:z-40 max-[1199px]:w-[280px] max-[1199px]:scale-0 max-[1199px]:origin-bottom-right max-[1199px]:transition-[scale] max-[1199px]:duration-300 max-[1199px]:data-[state=open]:scale-100',
+						'min-[1200px]:flex min-[1200px]:min-h-0 min-[1200px]:flex-1 min-[1200px]:flex-col',
+					]}
+					aria-label={__('toc')}
+				>
+					<div class="flex shrink-0 items-center gap-1.5 border-b border-rd-gray-alpha-400 px-5 py-3.5">
+						<i class="fa-regular fa-bars text-rd-gray-900" aria-hidden="true"></i>
+						<span class="text-sm font-bold text-rd-gray-1000">{__('toc')}</span>
+					</div>
+					<div class="toc-content min-h-0 flex-1 overflow-y-auto px-5 py-3 [scrollbar-width:none] [-ms-overflow-style:none]">
+						<Toc headings={headings} title={title} />
+					</div>
+				</div>
+			)
+		}
+
+		{themeConfig.articles.recommendation.enable !== false && <Recommendation post={post} />}
+	</div>
+</aside>

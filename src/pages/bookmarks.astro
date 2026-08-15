@@ -1,0 +1,63 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageTitle from '../components/PageTitle.astro';
+import { __ } from '../i18n';
+import bookmarksData from '../data/bookmarks.json';
+
+const title = __('bookmarks');
+---
+
+<BaseLayout title={title}>
+	<div id="main-content" class="relative box-border h-full w-9/10 max-w-content transition-[max-width,width] duration-200 ease-in-out sm:w-6/7 md:w-4/5">
+		<div class="py-8 sm:py-0">
+			<PageTitle title={title} />
+			<div class="flex w-full flex-col gap-6 md:flex-row md:gap-12">
+				<div class="h-fit w-full shrink-0 sm:py-6 md:sticky md:top-[var(--current-navbar-height)] md:w-48">
+					<nav class="scrollbar-hide flex gap-2 overflow-x-auto pb-4 md:block md:pb-0" aria-label="Bookmarks">
+						{bookmarksData.map((category, index) => {
+							const sectionId = `bookmark-section-${index}`;
+							return (
+								<a
+									data-bookmark-nav
+									aria-controls={sectionId}
+									href={`#${sectionId}`}
+									class="block shrink-0 whitespace-nowrap rounded-lg border border-transparent px-3 py-2 font-medium transition-all duration-200 hover:border-rd-gray-200 hover:bg-rd-gray-200 hover:text-primary aria-[current=location]:border-rd-gray-200 aria-[current=location]:bg-rd-gray-200 aria-[current=location]:text-primary md:whitespace-normal"
+								>
+									<i class:list={['fa-regular', category.icon, 'mr-2 h-6 w-6']} aria-hidden="true"></i>{category.category}
+								</a>
+							);
+						})}
+					</nav>
+				</div>
+
+				<div class="max-w-full flex-1">
+					{bookmarksData.map((category, index) => (
+						<section id={`bookmark-section-${index}`} data-bookmark-section class="mb-12">
+							<h2 class="mb-4 border-b border-rd-gray-alpha-400 pb-2 text-2xl font-semibold text-rd-gray-1000">{category.category}</h2>
+							<div class="grid gap-6 lg:grid-cols-2">
+								{category.items.map((item) => (
+									<a href={item.link} target="_blank" rel="noopener noreferrer" class="group block">
+										<div class="rounded-2xl border border-rd-gray-alpha-400 p-5">
+											<div class="flex items-center gap-5">
+												<div class="size-12 shrink-0 overflow-hidden rounded-lg bg-rd-gray-100 transition-transform duration-300 group-hover:scale-105 flex items-center justify-center">
+													<img src={item.image} alt={item.name} class="h-full w-full object-cover" onerror={`this.src='/images/bookmark-placeholder.svg'`} />
+												</div>
+												<div class="flex min-w-0 flex-1 flex-col gap-1">
+													<div class="flex items-center justify-between">
+														<h3 class="font-medium text-rd-gray-1000 transition-colors group-hover:text-primary">{item.name}</h3>
+														<i class="fa-regular fa-arrow-right -translate-x-1 text-rd-gray-900 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100" aria-hidden="true"></i>
+													</div>
+													<p class="line-clamp-2 text-sm text-rd-gray-900">{item.description}</p>
+												</div>
+											</div>
+										</div>
+									</a>
+								))}
+							</div>
+						</section>
+					))}
+				</div>
+			</div>
+		</div>
+	</div>
+</BaseLayout>

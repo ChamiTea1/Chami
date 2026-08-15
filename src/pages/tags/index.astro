@@ -1,0 +1,65 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageTitle from '../../components/PageTitle.astro';
+import { themeConfig } from '../../config';
+import { __ } from '../../i18n';
+import { getTags } from '../../utils/collections';
+
+const posts = await getCollection('blog');
+const tags = getTags(posts);
+const title = __('tags');
+
+const counts = [...new Set(tags.map((tag) => tag.count))].sort((a, b) => a - b);
+const blurClasses = ['blur-sm', 'blur-xs', 'opacity-70', 'blur-none'];
+const blurClassByCount = new Map(
+	counts.map((count, index) => {
+		const tier = counts.length === 1 ? blurClasses.length - 1 : Math.round((index * (blurClasses.length - 1)) / (counts.length - 1));
+		return [count, blurClasses[tier]];
+	}),
+);
+---
+
+<BaseLayout title={title}>
+	<div id="main-content" class="relative box-border h-full w-9/10 max-w-content transition-[max-width,width] duration-200 ease-in-out sm:w-6/7 md:w-4/5">
+		<div class="mb-4 pt-5 sm:mb-6 sm:pt-0 md:mb-8">
+			<PageTitle title={title} showBorder />
+
+			{
+				tags.length > 0 && (
+					<>
+						{themeConfig.page_templates.tags_style === 'cloud' ? (
+							<div class="tags">
+								{tags.map((tag) => (
+									<a href={`/tags/${encodeURIComponent(tag.slug)}/`}>{tag.name}</a>
+								))}
+							</div>
+						) : (
+							<ul class="group/tags flex list-none flex-wrap items-center justify-center p-0 leading-10">
+								{tags.map((tag) => {
+									const blurClass = blurClassByCount.get(tag.count);
+									return (
+										<li>
+											<a
+												class:list={[
+													'relative m-2.5 block flex-1 rounded-2xl border border-rd-gray-alpha-400 bg-rd-background-100 px-6 py-3.5 text-2xl text-rd-gray-1000 transition-[filter,color,background-color,transform] duration-300 group-hover/tags:blur-none group-hover/tags:opacity-100 hover:bg-primary hover:!text-rd-primary-text active:translate-y-0.5 [&_i]:mr-1 [&_i]:opacity-30 [&_i]:!text-inherit',
+													blurClass,
+												]}
+												href={`/tags/${encodeURIComponent(tag.slug)}/`}
+											>
+												<i class="fa-solid fa-hashtag" aria-hidden="true"></i>{tag.name}
+												<span class="ml-2.5 inline-block min-w-9 rounded-sm bg-rd-gray-100 px-2 py-1 text-center text-2xl text-rd-gray-900">
+													{tag.count}
+												</span>
+											</a>
+										</li>
+									);
+								})}
+							</ul>
+						)}
+					</>
+				)
+			}
+		</div>
+	</div>
+</BaseLayout>

@@ -1,0 +1,148 @@
+---
+import { themeConfig } from '../config';
+
+interface Props {
+	blurred?: boolean;
+	full?: boolean;
+}
+
+const { blurred = false, full = true } = Astro.props;
+
+const banner = themeConfig.home_banner;
+const subtitle = banner.subtitle;
+const subtitleEntries = Array.isArray(subtitle.text) ? subtitle.text : subtitle.text ? [subtitle.text] : [];
+const showSubtitle = subtitleEntries.length > 0 || Boolean(subtitle.hitokoto?.enable);
+
+const socialLinks = banner.social_links;
+const links = socialLinks.links.filter((item) => item && item.url);
+const qrs = (socialLinks.qrs ?? []).filter((item) => item && item.qr);
+const hasQrs = qrs.length > 0;
+
+const flexDirection = socialLinks.style === 'reverse' ? 'flex-row-reverse' : 'flex-row';
+const justify = socialLinks.style === 'center' ? 'justify-center' : 'justify-between';
+const scrollDisplay = socialLinks.style === 'center' ? 'hidden' : 'flex';
+
+const normalizeIcon = (iconValue: string | undefined, fallbackName: string): string => {
+	const source = iconValue || fallbackName || '';
+	if (!source) return '';
+	if (source === 'email') return 'fa-solid fa-at';
+	if (source.startsWith('/') || source.startsWith('http')) return source;
+	if (source.includes('fa-')) return source;
+	return `fa-brands fa-${source}`;
+};
+
+const bannerStyle = themeConfig.home_banner.style;
+---
+
+<div data-home-banner={bannerStyle === 'fixed' ? 'fixed' : 'static'}>
+	<div
+		id="home-banner-background"
+		class:list={[
+			'transition-fade top-0 left-0 h-screen w-screen scale-125 box-border bg-cover will-change-transform sm:scale-110',
+			bannerStyle === 'fixed' ? 'fixed' : 'absolute',
+			blurred && 'blur-lg',
+		]}
+	>
+		<img src={banner.image.light} alt="" class="h-full w-full object-cover dark:hidden" aria-hidden="true" />
+		<img src={banner.image.dark} alt="" class="hidden h-full w-full object-cover dark:block" aria-hidden="true" />
+	</div>
+
+	{
+		full && (
+			<section
+				id="home-banner"
+				class="transition-fade relative flex min-h-screen w-full box-border items-center justify-center overflow-hidden font-home will-change-transform"
+			>
+				<div class="transition-fade-down relative flex min-h-svh box-border flex-col items-center justify-center">
+					<div class="home-title flex w-screen flex-col items-center justify-center text-center text-[length:var(--home-title-size)] leading-[var(--home-line-height)] font-medium text-home-banner-text-color">
+						<div class="tracking-tight">{banner.title}</div>
+						{showSubtitle && (
+							<p>
+								<i id="subtitle"></i>
+							</p>
+						)}
+					</div>
+
+					{
+						socialLinks.enable && (
+							<div class={`absolute bottom-0.5 flex w-full max-w-7xl items-center px-8 sm:px-12 ${flexDirection} ${justify}`}>
+								<button
+									id="scroll-to-main"
+									type="button"
+									aria-label="Scroll to content"
+									title="Scroll to content"
+									class:list={[
+										`${scrollDisplay}`,
+										'aspect-square h-full cursor-pointer items-center justify-center rounded-full border border-white/20 bg-gray-300/50 p-3 backdrop-blur-lg dark:border-gray-500/30 dark:bg-gray-500/40',
+									]}
+								>
+									<i class="fa-solid fa-arrow-down fa-fw fa-lg transition-transform hover:translate-y-1" aria-hidden="true"></i>
+								</button>
+								{
+									(links.length > 0 || hasQrs) && (
+										<div class="flex flex-row items-center gap-3 rounded-full border border-white/20 bg-gray-300/50 px-6 py-3 backdrop-blur-lg dark:border-gray-500/30 dark:bg-gray-500/40">
+									{
+										links.map((item) => {
+											const name = item.name || '';
+											const icon = normalizeIcon(item.icon, name);
+											const isEmail = name === 'email' || (icon && icon.includes('fa-at'));
+											const resolvedUrl = isEmail && !item.url.startsWith('mailto:') ? `mailto:${item.url}` : item.url;
+											return (
+												<a
+													href={resolvedUrl}
+													target={isEmail ? undefined : '_blank'}
+													rel={isEmail ? undefined : 'noopener noreferrer'}
+													aria-label={name || 'Social link'}
+												>
+													{icon.includes('fa-') ? (
+														<i class={`${icon} fa-fw fa-lg`} aria-hidden="true"></i>
+													) : (
+														<img src={icon} alt="" class="h-5 w-5 object-contain" aria-hidden="true" />
+													)}
+												</a>
+											);
+										})
+									}
+
+									{
+										hasQrs && (
+											<>
+												<div class="mx-0.5 h-4 w-px bg-home-banner-text-color/40" aria-hidden="true"></div>
+												{qrs.map((item, index) => {
+													const name = item.name || 'QR code';
+													const icon = normalizeIcon(item.icon, item.name || '');
+													const qrId = `home-qr-${index}`;
+													return (
+														<span class="qr group relative cursor-pointer" data-qr data-state="closed">
+															<button type="button" data-qr-trigger aria-controls={qrId} aria-expanded="false" aria-label={name} class="flex items-center justify-center">
+																{icon.includes('fa-') ? (
+																	<i class={`${icon} fa-fw fa-lg`} aria-hidden="true"></i>
+																) : (
+																	<img src={icon} alt="" class="h-5 w-5 object-contain" aria-hidden="true" />
+																)}
+															</button>
+															<div
+																id={qrId}
+																data-qr-popup
+																aria-hidden="true"
+																class="invisible absolute right-0 bottom-0 mb-14 h-auto translate-y-0.5 overflow-hidden rounded-3xl border border-white/20 bg-rd-background-100/40 opacity-0 transition-all group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 dark:border-gray-500/30"
+															>
+																<img class="w-64" src={item.qr} alt={name} />
+															</div>
+														</span>
+													);
+												})}
+											</>
+										)
+									}
+								</div>
+									)
+								}
+							</div>
+						)
+					}
+				</div>
+			</section>
+		)
+	}
+</div>
