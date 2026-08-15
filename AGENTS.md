@@ -26,8 +26,7 @@ Astro 7 + Tailwind CSS v4 的个人博客，移植自 [hexo-theme-redefine](http
 
 - 文章放 `src/content/blog/`，`pubDate` 用 ISO 格式带时区（如 `2026-08-13T17:30:00+08:00`），不要用空格分隔的非标准格式。
 - 支持的 hexo 风格标签插件：`{% note %}`、`{% folding %}`、`{% grid %}`、`{% tabs %}`、`{% btn %}`、`{% audio %}`、`{% bilibili %}` 等（实现见 `src/plugins/remark-tags.ts`）。
-  - 行内标签（btn/audio/bilibili）可与同段落的粗体、行内代码、链接共存（2026-08-15 已修复 GFM 自动链接拆散标签参数导致的格式丢失，见 `CODE_REVIEW.md` 问题 1 的修复记录）。
-- 已知问题清单见 `CODE_REVIEW.md`，改相关代码前先查一下，避免重复"发现"或误改。
+  - 行内标签（btn/audio/bilibili）可与同段落的粗体、行内代码、链接共存（2026-08-15 已修复 GFM 自动链接拆散标签参数导致的格式丢失）。
 
 ## 开发
 
@@ -72,6 +71,6 @@ astro dev --background
 
 ## 部署前检查清单
 
-- `src/config.ts` 的 `url` 改为真实域名（当前是占位符 `https://example.com`，会污染 RSS/sitemap/OG）。
-- 替换 `src/data/` 下的示例数据（essays/friends/bookmarks 目前是英文示例）。
+- `src/config.ts` 的 `url` 已设为 `https://chami.asia`（2026-08-15）；若换域名改这里并重新构建。
+- `src/data/` 的 essays/friends/bookmarks 目前是中文示例数据，上线前替换为真实内容。
 - 确认 favicon 指向（当前配置指向外部图床头像，`public/favicon.ico`/`favicon.svg` 未被引用）。

@@ -8,7 +8,7 @@ export const siteConfig = {
 	title: '茶糜的小站',
 	subtitle: '记录生活与学习的点点滴滴',
 	author: '茶糜',
-	url: 'https://example.com',
+	url: 'https://chami.asia',
 	language: 'zh-CN',
 	description: '记录生活与学习的点点滴滴。',
 };
@@ -61,7 +61,7 @@ export const themeConfig = {
 		},
 		open_graph: {
 			enable: true,
-			image: '/images/redefine-og.webp',
+			image: 'https://cdn.jsdelivr.net/gh/ChamiTea1/img-bed@main/avatar/shaoye.jpg',
 			description: siteConfig.description,
 		},
 		google_analytics: {
@@ -157,6 +157,7 @@ export const themeConfig = {
 			{ label: 'Archives', path: '/archives', icon: 'fa-regular fa-archive' },
 			{ label: 'Tags', path: '/tags', icon: 'fa-regular fa-tags' },
 			{ label: 'Categories', path: '/categories', icon: 'fa-regular fa-folder' },
+			{ label: '相册', path: '/photos', icon: 'fa-regular fa-images' },
 			{ label: 'About', path: '/about', icon: 'fa-regular fa-user' },
 		] as { label: string; path: string; icon?: string; submenus?: { label: string; path: string }[] }[],
 		search: {
@@ -171,7 +172,7 @@ export const themeConfig = {
 		sidebar: {
 			enable: true,
 			position: 'left' as 'left' | 'right',
-			first_item: 'menu' as 'menu' | 'info',
+			// first_item 菜单卡片已按站长要求移除，sidebar.links 仅用于移动端菜单（Navbar）
 			announcement: '欢迎来到我的小站~',
 			show_on_mobile: true,
 			links: [

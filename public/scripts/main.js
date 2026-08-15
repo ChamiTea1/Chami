@@ -1916,9 +1916,15 @@
 		const init = async () => {
 			masonryContainer.setAttribute('aria-busy', 'true');
 			try {
-				const response = await fetch(dataUrl);
-				if (!response.ok) throw new Error(`Request failed with status ${response.status}`);
-				items = await response.json();
+				// 子相册页把数据内联在 data-masonry-items 上，无需再请求 JSON 端点
+				const inlineJson = masonryContainer.dataset.masonryItems;
+				if (inlineJson) {
+					items = JSON.parse(inlineJson);
+				} else {
+					const response = await fetch(dataUrl);
+					if (!response.ok) throw new Error(`Request failed with status ${response.status}`);
+					items = await response.json();
+				}
 			} catch (error) {
 				console.error('Failed to load masonry data:', error);
 				masonryContainer.setAttribute('aria-busy', 'false');

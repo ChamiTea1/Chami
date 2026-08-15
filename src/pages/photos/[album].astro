@@ -1,0 +1,77 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageTitle from '../../components/PageTitle.astro';
+import { __ } from '../../i18n';
+import albumsData from '../../data/masonry.json';
+
+interface MasonryItem {
+	image?: string;
+	title?: string;
+	description?: string;
+	width?: number;
+	height?: number;
+	exif?: boolean;
+}
+
+interface MasonryAlbum {
+	name: string;
+	slug: string;
+	cover?: string;
+	description?: string;
+	items?: MasonryItem[];
+}
+
+const albums = albumsData as unknown as MasonryAlbum[];
+
+export function getStaticPaths() {
+	// getStaticPaths 在独立作用域执行，无法访问 frontmatter 变量，需自行读取数据
+	const paths = (albumsData as unknown as MasonryAlbum[]).map((album) => ({ params: { album: album.slug } }));
+	return paths;
+}
+
+const { album } = Astro.params;
+const data = albums.find((item) => item.slug === album);
+
+// 找不到该相册时退回相册总页
+if (!data) {
+	return Astro.redirect('/photos/');
+}
+
+const items = (data.items ?? []).filter((item) => item.image);
+const hasExif = items.some((item) => item.exif === true);
+const inlineItems = JSON.stringify(
+	items.map((item) => ({
+		image: item.image,
+		title: item.title || '',
+		description: item.description || '',
+		width: item.width,
+		height: item.height,
+		exif: item.exif === true,
+	})),
+);
+
+const title = data.name;
+---
+
+<BaseLayout title={title}>
+	<div id="main-content" class="relative box-border h-full w-9/10 max-w-content transition-[max-width,width] duration-200 ease-in-out sm:w-6/7 md:w-4/5">
+		<div class="py-8 sm:py-0">
+			<PageTitle title={title} showBorder />
+			<div
+				id="masonry-container"
+				class="relative block min-h-screen opacity-100"
+				data-masonry-items={inlineItems}
+				aria-busy="false"
+			>
+			</div>
+			<div id="masonry-loadmore" class="my-5 mb-2.5 flex min-h-7 items-center justify-center gap-2.5 text-sm text-rd-gray-1000" aria-live="polite" hidden>
+				<span class="size-5 animate-spin rounded-full border-2 border-rd-gray-alpha-400 border-t-primary" aria-hidden="true"></span>
+				<span class="sr-only">{__('masonry_loading')}</span>
+			</div>
+			<div id="masonry-sentinel" class="h-px w-full" aria-hidden="true"></div>
+		</div>
+	</div>
+
+	<script defer src="/scripts/minimasonry.min.js" data-swup-reload-script></script>
+	{hasExif && <script defer src="/scripts/exif-reader.js" data-swup-reload-script></script>}
+</BaseLayout>

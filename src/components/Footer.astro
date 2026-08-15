@@ -53,16 +53,5 @@ const showYearRange = startYear !== null && startYear !== currentYear;
 				</div>
 			)}
 		</div>
-		<div class="order-3 min-w-0 lg:col-start-1 lg:row-start-1 flex flex-col items-center sm:items-start">
-			<div class="text-sm font-light">
-				<span set:html={__('powered_by', '<a target="_blank" class="text-sm" href="https://astro.build">Astro</a>')} />
-			</div>
-			<a class="text-sm flex items-center gap-1" target="_blank" href="https://github.com/EvanNotFound/hexo-theme-redefine">
-				<img src="/images/redefine-logo.svg" alt="" aria-hidden="true" class="size-4" />
-				<span>
-					{__('theme')}&nbsp;Redefine v{themeConfig.credit.theme_version}
-				</span>
-			</a>
-		</div>
 	</div>
 </footer>

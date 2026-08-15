@@ -60,6 +60,8 @@ const en = {
 	essays: 'Essays',
 	photos: 'Photos',
 	masonry_loading: 'Loading photos...',
+	photos_count: '%s photos',
+	photos_empty: 'No albums yet.',
 	image_viewer: 'Image viewer',
 	expired: 'This post is written %s days ago, and the content may not be up to date.',
 	exif: {
@@ -180,6 +182,8 @@ const zhCN: typeof en = {
 	essays: '随笔',
 	photos: '相册',
 	masonry_loading: '照片加载中...',
+	photos_count: '%s 张照片',
+	photos_empty: '还没有相册',
 	image_viewer: '图片查看器',
 	expired: '这篇文章最后更新于 %s 天前，内容可能已经过时。',
 	exif: {
