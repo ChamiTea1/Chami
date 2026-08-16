@@ -1,0 +1,49 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageTitle from '../components/PageTitle.astro';
+import { __ } from '../i18n';
+import musicData from '../data/music.json';
+import { musicPlayUrl, type PlaylistEntry } from '../utils/music';
+
+const title = __('music');
+const playlists = (musicData as unknown as PlaylistEntry[]).filter((p) => p.id && p.name);
+const serverName = (server: string) => (server === 'tencent' ? 'QQ音乐' : '网易云音乐');
+---
+
+<BaseLayout title={title}>
+	<div id="main-content" class="relative box-border h-full w-9/10 max-w-content transition-[max-width,width] duration-200 ease-in-out sm:w-6/7 md:w-4/5">
+		<div class="py-8 sm:py-0">
+			<PageTitle title={title} showBorder />
+
+			<ul id="music-list" class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+				{
+					playlists.map((p) => (
+						<li>
+							<a href={musicPlayUrl(p)} class="group flex flex-col">
+								<div class="music-cover flex aspect-square w-full items-center justify-center overflow-hidden rounded-2xl border border-rd-gray-alpha-400 text-rd-gray-900">
+									{
+										p.cover ? (
+											<img src={p.cover} alt={p.name} loading="lazy" decoding="async" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+										) : (
+											<i class="fa-solid fa-music text-3xl" aria-hidden="true"></i>
+										)
+									}
+								</div>
+								<div class="flex flex-col px-1 pt-2">
+									<span class="truncate text-sm font-medium text-rd-gray-1000 group-hover:!text-primary">{p.name}</span>
+									<span class="text-xs text-rd-gray-900">{serverName(p.server)}</span>
+								</div>
+							</a>
+						</li>
+					))
+				}
+			</ul>
+		</div>
+	</div>
+</BaseLayout>
+
+<style>
+	.music-cover {
+		background: linear-gradient(135deg, var(--rd-gray-200), var(--rd-gray-100));
+	}
+</style>

@@ -31,33 +31,55 @@ interface FanImage {
 	rot: number;
 	cx: number;
 	cy: number;
-	wheelRot: number;
+	arcRot: number;
+	delay: number;
 }
 
+const RAD = Math.PI / 180;
+
 /**
- * 取相册最多 5 张图：默认扇形堆叠；悬停时浮起、围绕圆心展开成「摩天轮」圆环——
- * 每张图旋转到圆周切线方向（底部图片倒置）。
- * --x/--y/--rot 为扇形姿态，--cx/--cy 为圆形位置，--wheel-rot 为环上切线旋转角。
+ * 取相册最多 5 张图：默认扇形堆叠；悬停时像折扇一样张开——
+ * 铰链圆心 P 在卡片底边下方，所有底边相切于该铰链圆（半径 hingeR），
+ * 每张扇骨沿圆依次滑动 30°，展开成 120° 的扇形。
+ * 最左一张完全钉死在原地（展开角 theta0 取其静止倾角，展开位 == 静止位），
+ * 其余从最右开始沿切线圆向右单侧展开、依次滑出。
+ * --x/--y/--rot 为静止姿态；--cx/--cy/--arc-rot 为张开后的位置与旋转角。
  */
 const fanFor = (album: MasonryAlbum): FanImage[] => {
 	const images = (album.items ?? []).filter((item) => item.image);
 	if (images.length === 0) return [];
 	const count = Math.min(5, images.length);
-	const radius = 140; // 环太小会让牌挤成一团，放大半径让牌明显铺开
+	const cardHalfH = 84; // 卡片高 10.5rem 的一半（中心到底边中点）
+	const hingeR = 30; // 底边公共切线圆（铰链）半径，圆心在底边下方
+	const step = 30; // 每张沿铰链圆滑动 30°
+	const stagger = 70; // 从最右边开始，向左每张延迟 70ms
+
+	// 最左卡片的静止姿态（完全钉在原地：展开角 = 静止倾角，展开位 == 静止位）
+	const t0 = -(count - 1) / 2;
+	const x0 = t0 * 30;
+	const y0 = 8;
+	const theta0 = t0 * 14; // 张开后最左扇骨的角度，与静止姿态 rot 一致
+
+	// 反解铰链圆心 P：card 中心 = P + (hingeR + cardHalfH) · (sinθ, -cosθ)
+	const arm = hingeR + cardHalfH;
+	const px = x0 - arm * Math.sin(theta0 * RAD);
+	const py = y0 + arm * Math.cos(theta0 * RAD);
+
 	const fan: FanImage[] = [];
 	for (let i = 0; i < count; i++) {
 		const index = count === 1 ? 0 : Math.round((i * (images.length - 1)) / (count - 1));
 		const t = i - (count - 1) / 2;
-		const theta = -Math.PI / 2 + (i * 2 * Math.PI) / count;
+		const theta = (theta0 + i * step) * RAD;
 		fan.push({
 			image: images[index].image as string,
 			alt: images[index].title || album.name,
 			x: t * 30,
 			y: 8,
 			rot: t * 14,
-			cx: Math.round(radius * Math.cos(theta)),
-			cy: Math.round(radius * Math.sin(theta)),
-			wheelRot: (i * 360) / count,
+			cx: Math.round(px + arm * Math.sin(theta)),
+			cy: Math.round(py - arm * Math.cos(theta)),
+			arcRot: Math.round((theta / RAD) * 10) / 10,
+			delay: (count - 1 - i) * stagger,
 		});
 	}
 	return fan;
@@ -90,7 +112,7 @@ const title = __('photos');
 															alt={img.alt}
 															loading="lazy"
 															decoding="async"
-															style={`--x: ${img.x}px; --y: ${img.y}px; --rot: ${img.rot}deg; --cx: ${img.cx}px; --cy: ${img.cy}px; --wheel-rot: ${img.wheelRot}deg; z-index: ${i + 1};`}
+															style={`--x: ${img.x}px; --y: ${img.y}px; --rot: ${img.rot}deg; --cx: ${img.cx}px; --cy: ${img.cy}px; --arc-rot: ${img.arcRot}deg; --delay: ${img.delay}ms; z-index: ${i + 1};`}
 														/>
 													))}
 												</div>
@@ -119,16 +141,20 @@ const title = __('photos');
 </BaseLayout>
 
 <style>
-	/* 子相册封面：默认多图扇形堆叠，悬停时浮起并展开为圆形 */
+	/* 子相册封面：默认多图扇形堆叠；悬停时整体上浮与扇形展开同时进行——
+	   沿底边公共切线圆向右单侧展开：最左一张相对扇面不动，
+	   其余每张 +30°，从最右边开始依次滑出 */
 	.album-fan {
 		position: relative;
-		height: 11.5rem;
+		height: 13rem;
 		margin-top: 0.5rem;
 		overflow: visible;
+		transition: transform 0.55s cubic-bezier(0.33, 1.15, 0.45, 1);
 	}
 
 	.album-fan:hover {
 		z-index: 30;
+		transform: translateY(-14px); /* 与展开同步的整体上浮 */
 	}
 
 	.album-fan img {
@@ -143,12 +169,14 @@ const title = __('photos');
 		transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) rotate(var(--rot));
 		transform-origin: 50% 50%;
 		transition:
-			transform 0.45s cubic-bezier(0.34, 1.3, 0.5, 1),
-			box-shadow 0.45s ease;
+			transform 0.55s cubic-bezier(0.33, 1.15, 0.45, 1),
+			box-shadow 0.55s ease;
 	}
 
 	.album-fan:hover img {
-		transform: translate(calc(-50% + var(--cx)), calc(-50% + var(--cy))) rotate(var(--wheel-rot));
+		transform: translate(calc(-50% + var(--cx)), calc(-50% + var(--cy))) rotate(var(--arc-rot));
 		box-shadow: 0 16px 32px rgb(0 0 0 / 22%);
+		/* 与上浮同时开始展开，仍从最右开始依次滑出 */
+		transition-delay: var(--delay, 0ms);
 	}
 </style>

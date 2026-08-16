@@ -17,9 +17,11 @@ interface Props {
 	description?: string;
 	image?: string;
 	isHome?: boolean;
+	/** 沉浸式音乐播放页：整页铺满、导航栏透明白字、页脚隐藏（data-type="music"） */
+	music?: boolean;
 }
 
-const { title, description, image, isHome = false } = Astro.props;
+const { title, description, image, isHome = false, music = false } = Astro.props;
 
 const pageTitle = title
 	? `${title} | ${siteConfig.title}`
@@ -56,7 +58,7 @@ const injectFooter = (themeConfig.inject.enable ? themeConfig.inject.footer : []
 ---
 
 <!doctype html>
-<html lang={siteConfig.language} {...attrs}>
+<html lang={siteConfig.language} {...attrs} data-type={music ? 'music' : undefined}>
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />

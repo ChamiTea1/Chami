@@ -67,3 +67,31 @@
     }
   }
 }
+
+/* 首页 banner 标题字号自适应（未分层，覆盖 :root 注入的变量） */
+@media (max-width: 1024px) {
+  #home-banner .home-title {
+    --home-title-size: 2.2rem;
+    --home-subtitle-size: 1.3rem;
+  }
+}
+
+@media (max-width: 640px) {
+  #home-banner .home-title {
+    --home-title-size: 1.7rem;
+    --home-subtitle-size: 1.1rem;
+  }
+}
+
+@media (max-width: 380px) {
+  #home-banner .home-title {
+    --home-title-size: 1.5rem;
+  }
+}
+
+/* 移动端竖屏（含平板竖屏）隐藏首页左侧侧栏卡片 */
+@media (orientation: portrait) and (max-width: 1024px) {
+  .home-sidebar {
+    display: none !important;
+  }
+}

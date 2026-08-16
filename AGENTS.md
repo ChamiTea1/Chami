@@ -28,6 +28,14 @@ Astro 7 + Tailwind CSS v4 的个人博客，移植自 [hexo-theme-redefine](http
 - 支持的 hexo 风格标签插件：`{% note %}`、`{% folding %}`、`{% grid %}`、`{% tabs %}`、`{% btn %}`、`{% audio %}`、`{% bilibili %}` 等（实现见 `src/plugins/remark-tags.ts`）。
   - 行内标签（btn/audio/bilibili）可与同段落的粗体、行内代码、链接共存（2026-08-15 已修复 GFM 自动链接拆散标签参数导致的格式丢失）。
 
+## 音乐页歌单维护
+
+- 歌单数据统一在 `src/data/music.json`（无前端添加入口；播放页 `/music/play/` 通过 URL 参数 `server/type/id/name/cover` 获取信息，样式参考 LuviciiBlog 的沉浸式音乐界面）。
+  - 字段：`name`（歌单名）、`server`（`netease` 网易云 / `tencent` QQ音乐）、`type`（`playlist` 歌单，或 `song` 单曲、`id` 可逗号分隔多首）、`id`、`cover`（可选封面 URL）。
+  - 取歌单 ID：网易云 `https://music.163.com/#/playlist?id=2426530028` → `2426530028`；QQ音乐 `https://y.qq.com/n/ryqq/playlist/12345` → `12345`。
+  - 查歌单名称与封面：`curl "https://music.163.com/api/v6/playlist/detail?id=<ID>"`（取 `playlist.name` 与 `playlist.coverImgUrl`）；封面也可按图片规范放 `public/images/` 或图床。
+- 修改 `music.json` 后重新构建部署即可生效；播放页播放器由 `public/scripts/main.js` 的 `initMusicPlay`/`initMusicTools` 动态创建（切换/随机/刷新按钮、随歌曲切换的模糊背景）。
+
 ## 开发
 
 启动开发服务器时，请使用后台模式：
