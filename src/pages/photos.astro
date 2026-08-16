@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PageTitle from '../components/PageTitle.astro';
+import SideCard from '../components/SideCard.astro';
 import { __ } from '../i18n';
 import albumsData from '../data/masonry.json';
 
@@ -86,59 +87,147 @@ const fanFor = (album: MasonryAlbum): FanImage[] => {
 };
 
 const title = __('photos');
+const coverPool = albums.map((album) => album.cover).filter(Boolean) as string[];
+const bannerCover = coverPool[0];
+
+const albumCount = albums.length;
+const photoCount = albums.reduce((sum, album) => sum + (album.items?.length ?? 0), 0);
+const photosPool = albums.flatMap((album) =>
+	(album.items ?? [])
+		.filter((item) => item.image)
+		.map((item) => ({
+			image: item.image as string,
+			title: item.title || album.name,
+			albumName: album.name,
+			slug: album.slug,
+		})),
+);
+const firstPhoto = photosPool[0];
+// 约定：masonry.json 数组最前为最新（见 AGENTS.md）
+const recentAlbums = albums.slice(0, 3);
 ---
 
 <BaseLayout title={title}>
+	{
+		bannerCover && (
+			<div slot="banner" aria-hidden="true" class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+				<img
+					id="photos-banner-img"
+					src={bannerCover}
+					alt=""
+					data-covers={JSON.stringify(coverPool)}
+					class="h-full w-full scale-125 object-cover blur-[16px] dark:brightness-75 dark:saturate-[0.85]"
+				/>
+				<div class="page-banner-overlay page-banner-overlay-light dark:hidden"></div>
+				<div class="page-banner-overlay page-banner-overlay-dark hidden dark:block"></div>
+			</div>
+		)
+	}
 	<div id="main-content" class="relative box-border h-full w-9/10 max-w-content transition-[max-width,width] duration-200 ease-in-out sm:w-6/7 md:w-4/5">
-		<div class="py-8 sm:py-0">
-			<PageTitle title={title} showBorder />
-			{
-				albums.length > 0 ? (
-					<ul class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-						{albums.map((album) => (
-							<li>
-								<a
-									href={`/photos/${album.slug}/`}
-									class="group flex flex-col"
-								>
-									{
-										(() => {
-											const fan = fanFor(album);
-											return fan.length > 0 ? (
-												<div class="album-fan flex justify-center" aria-hidden="true">
-													{fan.map((img, i) => (
-														<img
-															src={img.image}
-															alt={img.alt}
-															loading="lazy"
-															decoding="async"
-															style={`--x: ${img.x}px; --y: ${img.y}px; --rot: ${img.rot}deg; --cx: ${img.cx}px; --cy: ${img.cy}px; --arc-rot: ${img.arcRot}deg; --delay: ${img.delay}ms; z-index: ${i + 1};`}
-														/>
-													))}
-												</div>
-											) : (
-												<div class="flex aspect-[4/3] w-full items-center justify-center bg-rd-gray-100">
-													<i class="fa-regular fa-images text-3xl text-rd-gray-900" aria-hidden="true"></i>
-												</div>
-											);
-										})()
-									}
-									<div class="flex flex-col items-center gap-1 p-4 text-center">
-										<span class="text-lg font-bold text-rd-gray-1000 transition-colors group-hover:!text-primary">{album.name}</span>
-										<span class="text-xs text-rd-gray-900">{__('photos_count', String(album.items?.length ?? 0))}</span>
-										{album.description && <p class="line-clamp-2 text-sm text-rd-gray-900">{album.description}</p>}
+		<div class="flex items-start justify-center gap-24">
+			<div class="min-w-0 flex-1">
+				<div class="py-8 sm:py-0">
+					<PageTitle title={title} showBorder />
+					{
+						albums.length > 0 ? (
+							<ul class="grid grid-cols-1 gap-[30px] sm:grid-cols-2 lg:grid-cols-3">
+								{albums.map((album) => (
+									<li>
+										<a
+											href={`/photos/${album.slug}/`}
+											class="group flex flex-col"
+										>
+											{
+												(() => {
+													const fan = fanFor(album);
+													return fan.length > 0 ? (
+														<div class="album-fan flex justify-center" aria-hidden="true">
+															{fan.map((img, i) => (
+																<img
+																	src={img.image}
+																	alt={img.alt}
+																	loading="lazy"
+																	decoding="async"
+																	style={`--x: ${img.x}px; --y: ${img.y}px; --rot: ${img.rot}deg; --cx: ${img.cx}px; --cy: ${img.cy}px; --arc-rot: ${img.arcRot}deg; --delay: ${img.delay}ms; z-index: ${i + 1};`}
+																/>
+															))}
+														</div>
+													) : (
+														<div class="flex aspect-[4/3] w-full items-center justify-center bg-rd-gray-100">
+															<i class="fa-regular fa-images text-3xl text-rd-gray-900" aria-hidden="true"></i>
+														</div>
+													);
+												})()
+											}
+											<div class="flex flex-col items-center gap-1 p-4 text-center">
+												<span class="text-lg font-bold text-rd-gray-1000 transition-colors group-hover:!text-primary">{album.name}</span>
+												<span class="text-xs text-rd-gray-900">{__('photos_count', String(album.items?.length ?? 0))}</span>
+												{album.description && <p class="line-clamp-2 text-sm text-rd-gray-900">{album.description}</p>}
+											</div>
+										</a>
+									</li>
+								))}
+							</ul>
+						) : (
+							<p class="py-10 text-center text-sm text-rd-gray-900">{__('photos_empty')}</p>
+						)
+					}
+				</div>
+			</div>
+
+			<aside class="page-sidebar fixed right-[150px] top-[calc(var(--current-navbar-height)+1rem)] hidden w-60 min-[1780px]:block">
+				<div class="sticky top-[calc(var(--current-navbar-height)+1rem)] mt-12 flex flex-col gap-6">
+					<SideCard icon="fa-regular fa-chart-simple" title={__('photos_stats')}>
+						<p class="text-sm text-rd-gray-900">{__('photos_stats_count', String(albumCount), String(photoCount))}</p>
+					</SideCard>
+
+					{
+						firstPhoto && (
+							<SideCard icon="fa-regular fa-dice" title={__('photos_blindbox')}>
+								<a id="photos-blindbox-link" href={`/photos/${firstPhoto.slug}/`} class="group block">
+									<div class="overflow-hidden rounded-xl border border-rd-gray-alpha-400">
+										<img
+											id="photos-blindbox-img"
+											src={firstPhoto.image}
+											alt={firstPhoto.title}
+											loading="lazy"
+											decoding="async"
+											class="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-105"
+										/>
+									</div>
+									<div class="mt-2 flex flex-col">
+										<span id="photos-blindbox-title" class="truncate text-sm font-medium text-rd-gray-1000 group-hover:!text-primary">{firstPhoto.title}</span>
+										<span id="photos-blindbox-album" class="text-xs text-rd-gray-900">{firstPhoto.albumName}</span>
 									</div>
 								</a>
-							</li>
-						))}
-					</ul>
-				) : (
-					<p class="py-10 text-center text-sm text-rd-gray-900">{__('photos_empty')}</p>
-				)
-			}
+								<p class="mt-2 text-xs text-rd-gray-900">{__('photos_blindbox_hint')}</p>
+							</SideCard>
+						)
+					}
+
+					{
+						recentAlbums.length > 0 && (
+							<SideCard icon="fa-regular fa-clock" title={__('photos_recent')}>
+								<ul class="flex flex-col gap-2">
+									{recentAlbums.map((album) => (
+										<li>
+											<a href={`/photos/${album.slug}/`} class="flex items-center justify-between gap-2 text-sm text-rd-gray-1000 transition-colors hover:!text-primary">
+												<span class="truncate">{album.name}</span>
+												<span class="shrink-0 text-xs text-rd-gray-900">{album.items?.length ?? 0}</span>
+											</a>
+										</li>
+									))}
+								</ul>
+							</SideCard>
+						)
+					}
+				</div>
+			</aside>
 		</div>
 	</div>
 </BaseLayout>
+
+<script type="application/json" id="photos-pool-data" set:html={JSON.stringify(photosPool)}></script>
 
 <style>
 	/* 子相册封面：默认多图扇形堆叠；悬停时整体上浮与扇形展开同时进行——

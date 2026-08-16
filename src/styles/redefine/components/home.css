@@ -89,9 +89,10 @@
   }
 }
 
-/* 移动端竖屏（含平板竖屏）隐藏首页左侧侧栏卡片 */
-@media (orientation: portrait) and (max-width: 1024px) {
-  .home-sidebar {
+/* 移动端竖屏（含平板竖屏）隐藏首页/相册/音乐一级页的侧栏卡片 */
+@media (orientation: portrait) and (max-width: 1279px) {
+  .home-sidebar,
+  .page-sidebar {
     display: none !important;
   }
 }

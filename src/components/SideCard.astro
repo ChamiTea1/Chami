@@ -1,0 +1,16 @@
+---
+interface Props {
+	icon?: string;
+	title: string;
+}
+
+const { icon, title } = Astro.props;
+---
+
+<section class="rounded-2xl border border-rd-gray-alpha-400 bg-rd-background-100/70 p-5 shadow-rd backdrop-blur-md">
+	<h2 class="mb-3 flex items-center gap-2 text-base font-bold text-rd-gray-1000">
+		{icon && <i class={`${icon} text-primary`} aria-hidden="true"></i>}
+		{title}
+	</h2>
+	<slot />
+</section>

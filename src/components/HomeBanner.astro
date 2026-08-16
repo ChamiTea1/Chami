@@ -32,6 +32,11 @@ const normalizeIcon = (iconValue: string | undefined, fallbackName: string): str
 };
 
 const bannerStyle = themeConfig.home_banner.style;
+
+/* light/dark 均支持单张或数组（数组即轮换池，见 main.js 的 banner swapper），SSR 只渲染首图 */
+const firstImage = (value: string | string[]): string => (Array.isArray(value) ? value[0] : value);
+const bannerImageLight = firstImage(banner.image.light);
+const bannerImageDark = firstImage(banner.image.dark);
 ---
 
 <div data-home-banner={bannerStyle === 'fixed' ? 'fixed' : 'static'}>
@@ -43,8 +48,8 @@ const bannerStyle = themeConfig.home_banner.style;
 			blurred && 'blur-lg',
 		]}
 	>
-		<img src={banner.image.light} alt="" class="h-full w-full object-cover dark:hidden" aria-hidden="true" />
-		<img src={banner.image.dark} alt="" class="hidden h-full w-full object-cover dark:block" aria-hidden="true" />
+		<img src={bannerImageLight} alt="" class="h-full w-full object-cover dark:hidden" aria-hidden="true" />
+		<img src={bannerImageDark} alt="" class="hidden h-full w-full object-cover dark:block" aria-hidden="true" />
 	</div>
 
 	{

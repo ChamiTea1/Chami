@@ -33,9 +33,11 @@ Astro 7 + Tailwind CSS v4 的个人博客，移植自 [hexo-theme-redefine](http
 ## 音乐页歌单维护
 
 - 歌单数据统一在 `src/data/music.json`（无前端添加入口；播放页 `/music/play/` 通过 URL 参数 `server/type/id/name/cover` 获取信息，样式参考 LuviciiBlog 的沉浸式音乐界面）。
-  - 字段：`name`（歌单名）、`server`（`netease` 网易云 / `tencent` QQ音乐）、`type`（`playlist` 歌单，或 `song` 单曲、`id` 可逗号分隔多首）、`id`、`cover`（可选封面 URL）。
-  - 取歌单 ID：网易云 `https://music.163.com/#/playlist?id=2426530028` → `2426530028`；QQ音乐 `https://y.qq.com/n/ryqq/playlist/12345` → `12345`。
-  - 查歌单名称与封面：`curl "https://music.163.com/api/v6/playlist/detail?id=<ID>"`（取 `playlist.name` 与 `playlist.coverImgUrl`）；封面也可按图片规范放 `public/images/` 或图床。
+  - 字段：`name`（歌单名）、`server`（`netease` 网易云 / `tencent` QQ音乐 / `custom` 自建直链）、`type`（`playlist` 歌单，或 `song` 单曲、`id` 可逗号分隔多首）、`id`、`cover`（可选封面 URL）。
+  - **QQ音乐（tencent）注意**：公共 Meting API（api.i-meto.com）解析腾讯音源基本不可用（Cloudflare 拦截 + 401），且周杰伦等歌手是 VIP 独占——腾讯歌单大概率播不了，优先用 `custom` 自建直链。
+  - **custom 自建直链歌单**：每个歌单一个文件 `src/data/custom-music/<id>.json`（字段 `name/artist/url/cover/lrc`，mp3/lrc/封面传图床走 jsDelivr，如 `https://cdn.jsdelivr.net/npm/<包>@<版本>/...` 或 `gh/<用户>/<仓库>@main/...`），`<id>` 与 `music.json` 里该歌单的 `id` 一致；构建时由 `src/pages/music/custom-songs/[id].json.ts` 逐个转成 Meting 格式静态 JSON；播放页对 `server=custom` 给 `<meting-js>` 加 `api="/music/custom-songs/<id>.json"`。新增自建歌单 = 加 `src/data/custom-music/<新id>.json` + `music.json` 里加一条 `server: custom`、同 `id` 的记录。
+  - 取歌单 ID：网易云 `https://music.163.com/#/playlist?id=2426530028` → `2426530028`；QQ音乐 `https://y.qq.com/n/ryqq/playlist/12345`（或 `n/ryqq_v2/playlist/12345`）→ `12345`。
+  - 查歌单名称与封面：`curl "https://music.163.com/api/v6/playlist/detail?id=<ID>"`（取 `playlist.name` 与 `playlist.coverImgUrl`）；QQ音乐页面是 JS 渲染的（og:title 无用），用 `curl "https://c.y.qq.com/v8/fcg-bin/fcg_v8_playlist_cp.fcg?id=<ID>&format=json&platform=h5" -H "Referer: https://y.qq.com/"`（取 `data.cdlist[0].dissname` 与 `.logo`，logo 改成 https 直接用）；封面也可按图片规范放 `public/images/` 或图床。
 - 修改 `music.json` 后重新构建部署即可生效；播放页播放器由 `public/scripts/main.js` 的 `initMusicPlay`/`initMusicTools` 动态创建（切换/随机/刷新按钮、随歌曲切换的模糊背景、键盘控制、加载失败错误层）。
   - 播放页 URL（`server/type/id/name/cover` 参数）生成逻辑统一在 `src/utils/music.ts` 的 `musicPlayUrl()`，`music.astro` 和 `music/play.astro` 共用，不要再手写副本。
   - 歌单数据经 play.astro 内 `<script type="application/json" id="music-playlists-data">` 注入（swup 替换 #swup 后仍可读）；若改用内联可执行脚本必须加 `data-swup-reload-script`，否则 SPA 进入时不执行。
@@ -68,7 +70,7 @@ astro dev --background
 ## 图片规范
 
 - 文章配图：放工程内 `public/images/<主题>/`（例如 `public/images/hakimi/`），单个图片文件超过 4MB 时压缩后再放（可用 `npm run compress-images` 自动处理）。
-- 相册（`src/data/masonry.json`）：单个相册 ≤ 20 张照片放工程 `public/images/`；超过 20 张放图床（ChamiTea1 图床仓库），数据文件里填图床 URL。
+- 相册（`src/data/masonry.json`）：单个相册 ≤ 20 张照片放工程 `public/images/`；超过 20 张放图床（ChamiTea1 图床仓库），数据文件里填图床 URL。**数组顺序约定：最前为最新**——相册一级页「最近更新」卡取前 3 个相册，新相册应加到数组最前。
 - 站点固定资源（头像、logo、banner、favicon）：放工程内。
 - 图片命名使用小写连字符风格（如 `hakimi-01.jpg`），不要用时间戳等无意义文件名。
 - 正文（markdown）图片必须使用 `/images/...` 绝对路径，相对路径不会被打包。

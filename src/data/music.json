@@ -19,5 +19,12 @@
 		"type": "playlist",
 		"id": "4907126777",
 		"cover": "https://p1.music.126.net/MABEFXdz0lgpgerSa977Ag==/109951164788591603.jpg"
+	},
+	{
+		"name": "百听不厌的周杰伦",
+		"server": "custom",
+		"type": "playlist",
+		"id": "jay-chou",
+		"cover": "https://qpic.y.qq.com/music_cover/0cthhV0GM91gWJWQ95ibGRGtXgKTNzsA9WnIZvH915S1UKmUibiattibew/300?n=1"
 	}
 ]

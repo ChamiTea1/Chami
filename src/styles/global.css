@@ -244,3 +244,21 @@
 .dark .aplayer-inline .aplayer svg circle {
 	fill: var(--rd-gray-1000);
 }
+
+/* ------------------------------------------------------------------ */
+/* 页面顶部模糊 banner 的渐变遮罩                                       */
+/* 用样式类而非内联 style：规避 SSR 内联 color-mix() 渐变在首屏解析丢失  */
+/* ------------------------------------------------------------------ */
+
+.page-banner-overlay {
+	position: absolute;
+	inset: 0;
+}
+
+.page-banner-overlay-light {
+	background: linear-gradient(to bottom, transparent, var(--rd-background-100) 55%);
+}
+
+.page-banner-overlay-dark {
+	background: linear-gradient(to bottom, transparent, var(--rd-background-100) 55%);
+}

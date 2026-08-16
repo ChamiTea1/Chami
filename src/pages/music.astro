@@ -1,46 +1,106 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PageTitle from '../components/PageTitle.astro';
+import SideCard from '../components/SideCard.astro';
 import { __ } from '../i18n';
 import musicData from '../data/music.json';
 import { musicPlayUrl, type PlaylistEntry } from '../utils/music';
 
 const title = __('music');
 const playlists = (musicData as unknown as PlaylistEntry[]).filter((p) => p.id && p.name);
-const serverName = (server: string) => (server === 'tencent' ? 'QQ音乐' : '网易云音乐');
+const coverPool = playlists.map((p) => p.cover).filter(Boolean) as string[];
+const bannerCover = coverPool[0] || '';
+const serverName = (server: string) =>
+	server === 'tencent'
+		? __('music_platform_tencent')
+		: server === 'custom'
+			? __('music_platform_custom')
+			: __('music_platform_netease');
+
+const playlistUrls = playlists.map((p) => musicPlayUrl(p));
+const totalCount = playlists.length;
+const neteaseCount = playlists.filter((p) => p.server === 'netease').length;
+const tencentCount = playlists.filter((p) => p.server === 'tencent').length;
+const customCount = playlists.filter((p) => p.server === 'custom').length;
 ---
 
 <BaseLayout title={title}>
+	{
+		bannerCover && (
+			<div slot="banner" aria-hidden="true" class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+				<img
+					id="music-banner-img"
+					src={bannerCover}
+					alt=""
+					data-covers={JSON.stringify(coverPool)}
+					class="h-full w-full scale-125 object-cover blur-[16px] dark:brightness-75 dark:saturate-[0.85]"
+				/>
+				<div class="page-banner-overlay page-banner-overlay-light dark:hidden"></div>
+				<div class="page-banner-overlay page-banner-overlay-dark hidden dark:block"></div>
+			</div>
+		)
+	}
 	<div id="main-content" class="relative box-border h-full w-9/10 max-w-content transition-[max-width,width] duration-200 ease-in-out sm:w-6/7 md:w-4/5">
-		<div class="py-8 sm:py-0">
-			<PageTitle title={title} showBorder />
+		<div class="flex items-start justify-center gap-24">
+			<div class="min-w-0 flex-1">
+				<div class="py-8 sm:py-0">
+					<PageTitle title={title} showBorder />
 
-			<ul id="music-list" class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-				{
-					playlists.map((p) => (
-						<li>
-							<a href={musicPlayUrl(p)} class="group flex flex-col">
-								<div class="music-cover flex aspect-square w-full items-center justify-center overflow-hidden rounded-2xl border border-rd-gray-alpha-400 text-rd-gray-900">
-									{
-										p.cover ? (
-											<img src={p.cover} alt={p.name} loading="lazy" decoding="async" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-										) : (
-											<i class="fa-solid fa-music text-3xl" aria-hidden="true"></i>
-										)
-									}
-								</div>
-								<div class="flex flex-col px-1 pt-2">
-									<span class="truncate text-sm font-medium text-rd-gray-1000 group-hover:!text-primary">{p.name}</span>
-									<span class="text-xs text-rd-gray-900">{serverName(p.server)}</span>
-								</div>
-							</a>
-						</li>
-					))
-				}
-			</ul>
+					<ul id="music-list" class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+						{
+							playlists.map((p) => (
+								<li>
+									<a href={musicPlayUrl(p)} class="group flex flex-col">
+										<div class="music-cover flex aspect-square w-full items-center justify-center overflow-hidden rounded-2xl border border-rd-gray-alpha-400 text-rd-gray-900">
+											{
+												p.cover ? (
+													<img src={p.cover} alt={p.name} loading="lazy" decoding="async" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+												) : (
+													<i class="fa-solid fa-music text-3xl" aria-hidden="true"></i>
+												)
+											}
+										</div>
+										<div class="flex flex-col px-1 pt-2">
+											<span class="truncate text-sm font-medium text-rd-gray-1000 group-hover:!text-primary">{p.name}</span>
+											<span class="text-xs text-rd-gray-900">{serverName(p.server)}</span>
+										</div>
+									</a>
+								</li>
+							))
+						}
+					</ul>
+				</div>
+			</div>
+
+			<aside class="page-sidebar hidden w-60 shrink-0 md:block">
+				<div class="sticky top-[calc(var(--current-navbar-height)+1rem)] mt-32 flex flex-col gap-6">
+					<SideCard icon="fa-regular fa-circle-play" title={__('music_continue')}>
+						<div id="music-continue" class="text-sm text-rd-gray-900">{__('music_continue_empty')}</div>
+					</SideCard>
+
+					<SideCard icon="fa-regular fa-shuffle" title={__('music_random_playlist')}>
+						<a
+							id="music-random-playlist"
+							href={playlistUrls[0] ?? '/music/'}
+							class="flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-rd-primary-text transition-opacity hover:opacity-85"
+						>
+							{__('music_random_btn')}
+						</a>
+					</SideCard>
+
+					<SideCard icon="fa-regular fa-chart-simple" title={__('music_stats')}>
+						<p class="text-sm text-rd-gray-900">{__('music_stats_count', String(totalCount))}</p>
+						<p class="mt-1 text-xs text-rd-gray-900">
+							{__('music_platform_netease')}: {neteaseCount} · {__('music_platform_tencent')}: {tencentCount} · {__('music_platform_custom')}: {customCount}
+						</p>
+					</SideCard>
+				</div>
+			</aside>
 		</div>
 	</div>
 </BaseLayout>
+
+<script type="application/json" id="music-home-playlists-data" set:html={JSON.stringify(playlistUrls)}></script>
 
 <style>
 	.music-cover {

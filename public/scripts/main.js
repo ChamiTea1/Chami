@@ -305,6 +305,626 @@
 	/* Home banner                                                 */
 	/* ---------------------------------------------------------- */
 
+	/* 首页 banner 多图轮换 + 玻璃击碎特效：每 8s 换一张，
+	   旧图从随机撞击点波纹式碎成不规则多边形、3D 翻滚抛散下坠，新图垫底静止；
+	   破碎由 WebGL2 单 canvas 实例化渲染（GPU 结算，主线程零开销），无 WebGL2 时回退 DOM 碎片 */
+	const BANNER_SWAP_INTERVAL = 8000;
+	let bannerSwapTimer = null;
+	let bannerShatterLock = false;
+	let bannerThemeObserver = null;
+	let bannerStage = null; // { bg, cur, nxt, lists, idx }
+
+	const bannerImageLists = () => {
+		const image = theme.home_banner?.image || {};
+		const toList = (value) => (Array.isArray(value) ? value.filter(Boolean) : value ? [value] : []);
+		return { light: toList(image.light), dark: toList(image.dark) };
+	};
+
+	/* 当前主题对应的图片池；本池为空时回退另一池 */
+	const activeBannerList = (lists) => {
+		const dark = document.documentElement.classList.contains('dark');
+		const list = dark ? lists.dark : lists.light;
+		return list.length ? list : dark ? lists.light : lists.dark;
+	};
+
+	const absUrl = (src) => new URL(src, window.location.href).href;
+
+	/* object-fit:cover 下图片在容器内的实际显示矩形（碎片背景按它对齐，避免拉伸错位） */
+	const coverRect = (img, w, h) => {
+		const iw = img.naturalWidth || w;
+		const ih = img.naturalHeight || h;
+		const scale = Math.max(w / iw, h / ih);
+		const dw = iw * scale;
+		const dh = ih * scale;
+		return { dw, dh, ox: (w - dw) / 2, oy: (h - dh) / 2 };
+	};
+
+	function stopBannerSwapper() {
+		if (bannerSwapTimer) {
+			window.clearInterval(bannerSwapTimer);
+			bannerSwapTimer = null;
+		}
+		if (bannerThemeObserver) {
+			bannerThemeObserver.disconnect();
+			bannerThemeObserver = null;
+		}
+		bannerStage = null;
+		bannerShatterLock = false;
+	}
+
+	/* 纯淡入淡出：prefers-reduced-motion 降级、暗色切换换池时使用 */
+	function fadeBannerTo(nextSrc) {
+		const stage = bannerStage;
+		if (!stage) return;
+		stage.currentSrc = nextSrc;
+		const { cur, nxt } = stage;
+		if (bannerShatterLock) {
+			/* 碎裂进行中：cur 已隐藏，直接瞬时切换（清理时会从 currentSrc 收尾） */
+			cur.src = nextSrc;
+			return;
+		}
+		nxt.style.transition = 'opacity 0.6s ease';
+		nxt.style.transform = 'none';
+		nxt.src = nextSrc;
+		nxt.style.opacity = '1';
+		setTimeout(() => {
+			if (bannerStage !== stage) return;
+			cur.src = nextSrc;
+			cur.style.opacity = '1';
+			nxt.style.transition = 'none';
+			nxt.style.opacity = '0';
+		}, 620);
+	}
+
+	/* ---------------------------------------------------------- */
+	/* WebGL 碎片渲染器：破碎特效整个搬进 1 块 canvas（1 次 draw）  */
+	/* ---------------------------------------------------------- */
+
+	/* 顶点着色器：全部物理（侵蚀前沿延迟、cubic-bezier 缓动、3D 翻滚、
+	   缺口生长、perspective:900px 透视）都在 GPU 里按 uTime 结算 */
+	const BANNER_VERT = `#version 300 es
+precision highp float;
+layout(location = 0) in vec2 aCorner; /* 角点相对碎片中心的偏移；中心顶点为 (0,0) */
+layout(location = 1) in vec2 aUV;
+layout(location = 2) in float aEdge;  /* 0=沿水平边切角 1=沿竖直边切角 -1=中心顶点不切 */
+layout(location = 3) in vec2 aCenter;
+layout(location = 4) in float aDelay;
+layout(location = 5) in float aDur;
+layout(location = 6) in vec2 aDelta;
+layout(location = 7) in vec4 aBase;
+layout(location = 8) in float aCut;   /* 该顶点的切角深度(px) */
+layout(location = 9) in vec4 aWind; /* x:摆动相位 y:摆动频率 z:摆动幅度 w:托起高度 */
+uniform vec2 uCenter;
+uniform vec2 uHalf;
+uniform vec2 uPerp; /* 垂直于风向的单位向量（摆动用） */
+uniform float uFocal;
+uniform float uTime;
+out vec2 vUV;
+out float vAlpha;
+
+float bezierX(float t) {
+	float u = 1.0 - t;
+	return 3.0 * u * u * t * 0.22 + 3.0 * u * t * t * 0.36 + t * t * t;
+}
+float bezierXd(float t) {
+	float u = 1.0 - t;
+	return 3.0 * u * (1.0 - 3.0 * t) * 0.22 + 3.0 * t * (2.0 - 3.0 * t) * 0.36 + 3.0 * t * t;
+}
+float bezierY(float t) {
+	float u = 1.0 - t;
+	return 3.0 * u * u * t * 0.61 + 3.0 * u * t * t + t * t * t;
+}
+/* CSS cubic-bezier(0.22, 0.61, 0.36, 1)：牛顿法反解 t，复刻 DOM 版缓动 */
+float easeTransform(float x) {
+	float t = clamp(x, 0.0, 1.0);
+	for (int i = 0; i < 4; i++) {
+		float err = bezierX(t) - x;
+		float d = max(bezierXd(t), 0.001);
+		t = clamp(t - err / d, 0.0, 1.0);
+	}
+	return bezierY(t);
+}
+mat3 rotX(float a) { float c = cos(a); float s = sin(a); return mat3(1.0, 0.0, 0.0, 0.0, c, s, 0.0, -s, c); }
+mat3 rotY(float a) { float c = cos(a); float s = sin(a); return mat3(c, 0.0, -s, 0.0, 1.0, 0.0, s, 0.0, c); }
+mat3 rotZ(float a) { float c = cos(a); float s = sin(a); return mat3(c, s, 0.0, -s, c, 0.0, 0.0, 0.0, 1.0); }
+
+void main() {
+	/* 与 DOM 版同款时序：transform 缓动 / 缺口 ease-in（前 35%）/ 透明 ease-in（后 55%） */
+	float e = easeTransform(clamp((uTime - aDelay) / aDur, 0.0, 1.0));
+	float pj = clamp((uTime - aDelay) / max(aDur * 0.99, 0.001), 0.0, 1.0);
+	float ej = pj * pj;
+	float pa = clamp((uTime - (aDelay + aDur * 0.42)) / max(aDur * 0.55, 0.001), 0.0, 1.0);
+	vAlpha = 1.0 - pa * pa;
+
+	/* 切角：起爆后角点沿所在边内缩形成斜边（切深随 ej 生长），
+	   静止时切深×0 即完美矩形无缝拼合，起爆后四边形随机变成五~八边形 */
+	vec2 c = aCorner;
+	if (aEdge > -0.5) {
+		if (aEdge < 0.5) c.x -= sign(c.x) * aCut * ej;
+		else c.y -= sign(c.y) * aCut * ej;
+	}
+
+	/* 吹拂感：脱落后被风托起（先升后落）、垂直风向正弦摆动（阵风）、翻滚角来回抖 */
+	float wobblePhase = uTime * aWind.y + aWind.x;
+	float wob = sin(wobblePhase) * aWind.z * e;
+	float lift = -sin(3.14159 * min(e * 1.15, 1.0)) * aWind.w;
+	vec2 windOffset = aDelta * e + uPerp * wob + vec2(0.0, lift);
+
+	float s = 1.0 - (1.0 - aBase.w) * e;
+	float rz = aBase.z * e + sin(wobblePhase * 0.9) * 0.6 * e;
+	vec3 p = rotX(aBase.x * e) * rotY(aBase.y * e) * rotZ(rz) * vec3(c * s, 0.0);
+	vec3 world = vec3(aCenter + windOffset, 0.0) + p;
+
+	/* 与 DOM 层 perspective:900px 一致的透视 */
+	float sp = uFocal / max(uFocal - world.z, 1.0);
+	vec2 clip = (world.xy - uCenter) / uHalf * sp;
+	gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
+	vUV = aUV;
+}`;
+
+	const BANNER_FRAG = `#version 300 es
+precision highp float;
+in vec2 vUV;
+in float vAlpha;
+uniform sampler2D uTex;
+out vec4 fragColor;
+void main() { fragColor = texture(uTex, vUV) * vAlpha; }`;
+
+	/* 生成全部碎片参数（GL 与 DOM 回退共用一套随机量） */
+	const buildBannerShards = (wx, wy, px, py, minProj, projRange, cols, rows, cw, ch) => {
+		/* 抖动缺口延迟到起爆时才出现（静止时碎片层 = 完美无缝复刻原图，不提前破碎）；
+		   缺口幅度按碎片大小同比放大（6% → 14%），保持锯齿的绝对观感 */
+		const jag = () => Number((Math.random() * 14).toFixed(1));
+		/* 切角深度：每角 65% 概率被切，深度为所在边长的 15-45%（角顺序 TL,TR,BR,BL） */
+		const cut = (len) => (Math.random() < 0.95 ? (0.5 + Math.random() * 0.3) * len : 0);
+		const shards = [];
+		for (let y = 0; y < rows; y++) {
+			for (let x = 0; x < cols; x++) {
+				const left = Math.round(x * cw);
+				const top = Math.round(y * ch);
+				const tw = Math.ceil(cw) + 2;
+				const th = Math.ceil(ch) + 2;
+				/* 侵蚀式破碎前沿：延迟按碎片在风向上的投影排序（扫描窗口 1200ms ≈ 消散时长） */
+				const projCx = x * cw + cw / 2;
+				const projCy = y * ch + ch / 2;
+				const delay = ((projCx * wx + projCy * wy - minProj) / projRange) * 1200 + Math.random() * 150;
+				const dur = 800 + Math.random() * 600;
+				/* 被风吹走：脱离前沿后沿风向长距离卷走（500-1100px），
+				   叠加横向飘摆与小幅上下扰动，配合着色器里的托起/摆动呈现吹拂感 */
+				const drift = 500 + Math.random() * 600;
+				const sway = (Math.random() - 0.5) * 120;
+				const dx = wx * drift + px * sway;
+				const dy = wy * drift + py * sway + (Math.random() - 0.5) * 60;
+				shards.push({
+					left,
+					top,
+					tw,
+					th,
+					cx: left + tw / 2,
+					cy: top + th / 2,
+					delay,
+					dur,
+					dx,
+					dy,
+					rx: (Math.random() - 0.5) * 80,
+					ry: (Math.random() - 0.5) * 80,
+					rz: (Math.random() - 0.5) * 540, /* 翻滚抖动 */
+					scale: 0.3 + Math.random() * 0.35,
+					jag: [jag(), jag(), jag(), jag()],
+					cutH: [cut(tw), cut(tw), cut(tw), cut(tw)], /* 每角沿水平边的切深 */
+					cutV: [cut(th), cut(th), cut(th), cut(th)], /* 每角沿竖直边的切深 */
+					/* 吹拂参数：摆动相位/频率/幅度、被风托起的高度（仅 WebGL 路径使用） */
+					windPhase: Math.random() * Math.PI * 2,
+					windFreq: 5 + Math.random() * 8,
+					windAmp: 6 + Math.random() * 14,
+					windLift: 20 + Math.random() * 40,
+				});
+			}
+		}
+		return shards;
+	};
+
+	/* WebGL2 实例化渲染；任何一步失败返回 false，走 DOM 回退。px/py 为垂直风向的单位向量（摆动方向） */
+	function initBannerShatterGL(stage, rect, w, h, shards, px, py) {
+		const { bg, cur, nxt } = stage;
+		window.__dbgShards = shards;
+		window.__dbgGL = null;
+		try {
+			const canvas = document.createElement('canvas');
+			canvas.style.cssText = 'position:absolute;inset:0;z-index:5;pointer-events:none;';
+			const dpr = Math.min(window.devicePixelRatio || 1, 2);
+			canvas.width = Math.max(1, Math.round(w * dpr));
+			canvas.height = Math.max(1, Math.round(h * dpr));
+			const gl = canvas.getContext('webgl2', { alpha: true, antialias: true, premultipliedAlpha: true });
+			if (!gl) return false;
+
+			const compile = (type, src) => {
+				const sh = gl.createShader(type);
+				gl.shaderSource(sh, src);
+				gl.compileShader(sh);
+				if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh));
+				return sh;
+			};
+			const prog = gl.createProgram();
+			gl.attachShader(prog, compile(gl.VERTEX_SHADER, BANNER_VERT));
+			gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, BANNER_FRAG));
+			gl.linkProgram(prog);
+			if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+			gl.useProgram(prog);
+
+			/* 顶点缓冲：每片 = 中心顶点 + 外圈 8 点（4 角 × 沿水平/竖直边各 1 个切角点）
+			   的三角扇共 24 顶点；每个顶点直接携带该片的全部参数（兼容所有驱动） */
+			const VSTRIDE = 20; // corner(2) uv(2) edge(1) center(2) delay(1) dur(1) delta(2) base(4) cut(1) wind(4)
+			const cornerData = new Float32Array(shards.length * 24 * VSTRIDE);
+			const SIGNS = [
+				[-1, -1],
+				[1, -1],
+				[1, 1],
+				[-1, 1],
+			]; // TL,TR,BR,BL
+			/* 外圈顺序绕周长一圈：上边两角(沿水平边) → 右边两角(沿竖直边) → 下边 → 左边 */
+			const RING = [
+				[0, 0],
+				[1, 0],
+				[1, 1],
+				[2, 1],
+				[2, 0],
+				[3, 0],
+				[3, 1],
+				[0, 1],
+			]; // [角序号, 0=水平边/1=竖直边]
+			shards.forEach((s, i) => {
+				const ringPt = ([ci, edge]) => ({
+					bx: (SIGNS[ci][0] * s.tw) / 2,
+					by: (SIGNS[ci][1] * s.th) / 2,
+					edge,
+					cut: edge === 0 ? s.cutH[ci] : s.cutV[ci],
+				});
+				const centerPt = { bx: 0, by: 0, edge: -1, cut: 0 };
+				for (let k = 0; k < 8; k++) {
+					[centerPt, ringPt(RING[k]), ringPt(RING[(k + 1) % 8])].forEach((v, j) => {
+						const o = (i * 24 + k * 3 + j) * VSTRIDE;
+						cornerData[o] = v.bx;
+						cornerData[o + 1] = v.by;
+						cornerData[o + 2] = (s.cx + v.bx - rect.ox) / rect.dw;
+						cornerData[o + 3] = (s.cy + v.by - rect.oy) / rect.dh;
+						cornerData[o + 4] = v.edge;
+						cornerData[o + 5] = s.cx;
+						cornerData[o + 6] = s.cy;
+						cornerData[o + 7] = s.delay / 1000;
+						cornerData[o + 8] = s.dur / 1000;
+						cornerData[o + 9] = s.dx;
+						cornerData[o + 10] = s.dy;
+						cornerData[o + 11] = (s.rx * Math.PI) / 180;
+						cornerData[o + 12] = (s.ry * Math.PI) / 180;
+						cornerData[o + 13] = (s.rz * Math.PI) / 180;
+						cornerData[o + 14] = s.scale;
+						cornerData[o + 15] = v.cut;
+						cornerData[o + 16] = s.windPhase;
+						cornerData[o + 17] = s.windFreq;
+						cornerData[o + 18] = s.windAmp;
+						cornerData[o + 19] = s.windLift;
+					});
+				}
+			});
+			const cornerBuf = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, cornerBuf);
+			gl.bufferData(gl.ARRAY_BUFFER, cornerData, gl.STATIC_DRAW);
+			window.__dbgGL = { gl, buf: cornerBuf, cpu: cornerData, stride: VSTRIDE, n: shards.length };
+			[
+				[0, 2, 0],
+				[1, 2, 8],
+				[2, 1, 16],
+				[3, 2, 20],
+				[4, 1, 28],
+				[5, 1, 32],
+				[6, 2, 36],
+				[7, 4, 44],
+				[8, 1, 60],
+				[9, 4, 64],
+			].forEach(([loc, size, off]) => {
+				gl.enableVertexAttribArray(loc);
+				gl.vertexAttribPointer(loc, size, gl.FLOAT, false, VSTRIDE * 4, off);
+			});
+
+			/* 纹理：当前图（UV 映射与 DOM 版 background-size/position 完全一致） */
+			const tex = gl.createTexture();
+			gl.bindTexture(gl.TEXTURE_2D, tex);
+			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, cur);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+			gl.enable(gl.BLEND);
+			gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+			gl.clearColor(0, 0, 0, 0);
+			gl.viewport(0, 0, canvas.width, canvas.height);
+			gl.uniform2f(gl.getUniformLocation(prog, 'uCenter'), w / 2, h / 2);
+			gl.uniform2f(gl.getUniformLocation(prog, 'uHalf'), w / 2, h / 2);
+			gl.uniform2f(gl.getUniformLocation(prog, 'uPerp'), px, py);
+			gl.uniform1f(gl.getUniformLocation(prog, 'uFocal'), 900);
+			const uTimeLoc = gl.getUniformLocation(prog, 'uTime');
+			window.__dbgGL = { ...(window.__dbgGL || {}), prog, uTimeLoc };
+
+			let maxEnd = 0;
+			shards.forEach((s) => {
+				maxEnd = Math.max(maxEnd, s.delay + s.dur);
+			});
+
+			let raf = 0;
+			const destroy = () => {
+				cancelAnimationFrame(raf);
+				canvas.remove();
+				gl.deleteTexture(tex);
+				gl.deleteBuffer(cornerBuf);
+				gl.deleteProgram(prog);
+			};
+
+			/* 首帧先画好、finish 落盘并自检通过后才挂载画布——
+			   否则新图会在画布首帧就绪前透出来，出现"先切新图再飘散" */
+			const t0 = performance.now();
+			gl.uniform1f(uTimeLoc, 0);
+			gl.clear(gl.COLOR_BUFFER_BIT);
+			gl.drawArrays(gl.TRIANGLES, 0, shards.length * 24);
+			gl.finish();
+			if (!bannerShatterGLOK(gl, cur, rect, canvas, dpr)) {
+				destroy();
+				return false;
+			}
+			bg.appendChild(canvas);
+
+			const frame = () => {
+				if (bannerStage !== stage) {
+					destroy();
+					return;
+				}
+				const t = (performance.now() - t0) / 1000;
+				gl.uniform1f(uTimeLoc, t);
+				gl.clear(gl.COLOR_BUFFER_BIT);
+				gl.drawArrays(gl.TRIANGLES, 0, shards.length * 24);
+				if (t * 1000 <= maxEnd + 80) {
+					raf = requestAnimationFrame(frame);
+					return;
+				}
+				destroy();
+				cur.src = stage.currentSrc; /* 碎裂中途若切过主题，取主题切换后的图 */
+				cur.style.opacity = '1';
+				nxt.style.transition = 'none';
+				nxt.style.transform = 'none';
+				nxt.style.opacity = '0';
+				bannerShatterLock = false;
+			};
+			raf = requestAnimationFrame(frame);
+			return true;
+		} catch (err) {
+			return false;
+		}
+	}
+
+	/* 首帧像素自检：帧缓冲与参考绘制逐点对比，偏差过大即判定该驱动渲染异常 */
+	const bannerShatterGLOK = (gl, cur, rect, canvas, dpr) => {
+		try {
+			const W = canvas.width;
+			const H = canvas.height;
+			const ref = document.createElement('canvas');
+			ref.width = W;
+			ref.height = H;
+			const rctx = ref.getContext('2d');
+			rctx.drawImage(cur, rect.ox * dpr, rect.oy * dpr, rect.dw * dpr, rect.dh * dpr);
+			const refData = rctx.getImageData(0, 0, W, H).data;
+			const buf = new Uint8Array(4);
+			/* 5×3 采样点均匀铺开（碎片重叠区内容一致，边界点也安全） */
+			for (let r = 1; r < 4; r++) {
+				for (let c = 1; c < 6; c++) {
+					const sx = Math.round((c * W) / 6);
+					const sy = Math.round((r * H) / 4);
+					gl.readPixels(sx, sy, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+					const ri = ((H - 1 - sy) * W + sx) * 4;
+					if (
+						Math.abs(buf[0] - refData[ri]) > 10 ||
+						Math.abs(buf[1] - refData[ri + 1]) > 10 ||
+						Math.abs(buf[2] - refData[ri + 2]) > 10
+					) {
+						return false;
+					}
+				}
+			}
+			return true;
+		} catch (err) {
+			return false;
+		}
+	};
+
+	function runBannerShatter(nextSrc) {
+		const stage = bannerStage;
+		if (!stage || bannerShatterLock) return;
+		bannerShatterLock = true;
+		const { bg, cur, nxt } = stage;
+
+		/* 新图垫底完全静止（不缩放落定：任何缩放都会让图顶/图底在破碎开始时上下动一下） */
+		nxt.style.transition = 'none';
+		nxt.src = nextSrc;
+		nxt.style.opacity = '1';
+		nxt.style.transform = 'none';
+
+		const w = bg.offsetWidth;
+		const h = bg.offsetHeight;
+		const rect = coverRect(cur, w, h);
+		/* WebGL 路径碎片数量：GPU 一次 draw call 结算，25600 片（约 7px/片）也轻松；
+		   再小就成噪点粉尘了。小屏 100×64。DOM 回退在下方单独降档。 */
+		const small = w < 768;
+		const cols = small ? 100 : 33;
+		const rows = small ? 64 : 33;
+		const cw = w / cols;
+		const ch = h / rows;
+		/* 风向：四个对角（左下→右上、右下→左上、左上→右下、右上→左下）+ 左右水平，
+		   六选一再叠 ±12° 抖动，不再总是水平吹 */
+		const baseAngles = [45, 135, 225, 315, 0, 180];
+		const windAngle = ((baseAngles[(Math.random() * baseAngles.length) | 0] + Math.random() * 24 - 12) * Math.PI) / 180;
+		const wx = Math.cos(windAngle);
+		const wy = Math.sin(windAngle);
+		const px = -wy; /* 垂直于风向，用于横向飘摆 */
+		const py = wx;
+		/* 起爆延迟按碎片在风向上的投影排序：上风处先被吹走，形成斜向波浪 */
+		const cornerProjs = [0, 0, w, 0, 0, h, w, h].reduce((acc, _, i, arr) => {
+			if (i % 2 === 0) acc.push(arr[i] * wx + arr[i + 1] * wy);
+			return acc;
+		}, []);
+		const minProj = Math.min(...cornerProjs);
+		const projRange = Math.max(...cornerProjs) - minProj || 1;
+		const shards = buildBannerShards(wx, wy, px, py, minProj, projRange, cols, rows, cw, ch);
+		/* 碎片层已完整复刻当前图，立刻隐藏底下的原图——否则碎片飞走后露出的还是旧图，
+		   清理时才瞬间跳新图（旧图重现→突变） */
+		stage.currentSrc = nextSrc;
+
+		/* WebGL 优先：1 个 canvas、1 次 draw call，GPU 结算全部动画，主线程零开销 */
+		if (initBannerShatterGL(stage, rect, w, h, shards, px, py)) {
+			cur.style.opacity = '0';
+			return;
+		}
+
+		/* 回退：DOM 碎片（无 WebGL2 或首帧自检失败），降到 45×28 保证流畅 */
+		const dcols = small ? 23 : 45;
+		const drows = small ? 14 : 28;
+		const domShards =
+			dcols === cols && drows === rows
+				? shards
+				: buildBannerShards(wx, wy, px, py, minProj, projRange, dcols, drows, w / dcols, h / drows);
+		const layer = document.createElement('div');
+		layer.style.cssText = 'position:absolute;inset:0;z-index:5;pointer-events:none;overflow:hidden;perspective:900px;';
+		const tiles = [];
+		domShards.forEach((s) => {
+			const tile = document.createElement('div');
+			tile.style.cssText = [
+				'position:absolute',
+				`left:${s.left}px`,
+				`top:${s.top}px`,
+				`width:${s.tw}px`,
+				`height:${s.th}px`,
+				`background-image:url("${cur.src}")`,
+				`background-size:${rect.dw.toFixed(1)}px ${rect.dh.toFixed(1)}px`,
+				`background-position:${(rect.ox - s.left).toFixed(1)}px ${(rect.oy - s.top).toFixed(1)}px`,
+				'clip-path:inset(0% 0% 0% 0%)',
+				'will-change:transform,opacity,clip-path',
+			].join(';');
+			layer.appendChild(tile);
+			tiles.push({ tile, ...s });
+		});
+		bg.appendChild(layer);
+		cur.style.opacity = '0';
+
+		requestAnimationFrame(() =>
+			requestAnimationFrame(() => {
+				let maxEnd = 0;
+				tiles.forEach(({ tile, delay, dur, dx, dy, rx, ry, rz, scale, jag }) => {
+					tile.style.transition =
+						`transform ${dur.toFixed(0)}ms cubic-bezier(0.22, 0.61, 0.36, 1) ${delay.toFixed(0)}ms, ` +
+						`opacity ${(dur * 0.55).toFixed(0)}ms ease-in ${(delay + dur * 0.45).toFixed(0)}ms, ` +
+						`clip-path ${(dur * 0.35).toFixed(0)}ms ease-in ${delay.toFixed(0)}ms`;
+					tile.style.transform =
+						`translate3d(${dx.toFixed(1)}px, ${dy.toFixed(1)}px, 0) ` +
+						`rotateX(${rx.toFixed(1)}deg) rotateY(${ry.toFixed(1)}deg) rotateZ(${rz.toFixed(1)}deg) scale(${scale.toFixed(2)})`;
+					tile.style.opacity = '0';
+					/* 缺口与飞散同时出现：消散到哪里就破碎到哪里 */
+					tile.style.clipPath = `inset(${jag[0]}% ${jag[1]}% ${jag[2]}% ${jag[3]}%)`;
+					maxEnd = Math.max(maxEnd, delay + dur);
+				});
+				setTimeout(() => {
+					layer.remove();
+					if (bannerStage !== stage) return;
+					cur.src = stage.currentSrc; /* 碎裂中途若切过主题，取主题切换后的图 */
+					cur.style.opacity = '1';
+					nxt.style.transition = 'none';
+					nxt.style.transform = 'none';
+					nxt.style.opacity = '0';
+					bannerShatterLock = false;
+				}, maxEnd + 80);
+			}),
+		);
+	}
+
+	/* 暗色切换：同位置换另一池的图（淡入淡出，不碎裂） */
+	function watchBannerTheme() {
+		if (bannerThemeObserver) bannerThemeObserver.disconnect();
+		bannerThemeObserver = new MutationObserver(() => {
+			const stage = bannerStage;
+			if (!stage) return;
+			const list = activeBannerList(stage.lists);
+			if (!list.length) return;
+			const src = list[stage.idx % list.length];
+			if (stage.cur.src !== absUrl(src)) fadeBannerTo(src);
+		});
+		bannerThemeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+	}
+
+	function initBannerSwapper() {
+		const bg = $('#home-banner-background');
+		if (!bg) {
+			stopBannerSwapper();
+			return;
+		}
+		if (bannerStage && bannerStage.bg === bg) return; // 当前实例已初始化
+		stopBannerSwapper();
+
+		const lists = bannerImageLists();
+		const list = activeBannerList(lists);
+		if (!list.length) return;
+
+		/* SSR 两张主题图退位，自建舞台（不碰 dark: 类） */
+		const ssrImgs = [...bg.querySelectorAll(':scope > img')];
+		const mkImg = () => {
+			const img = document.createElement('img');
+			img.alt = '';
+			img.setAttribute('aria-hidden', 'true');
+			img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;';
+			return img;
+		};
+		const nxt = mkImg();
+		nxt.style.opacity = '0';
+		const cur = mkImg();
+		cur.src = list[0];
+		const reveal = () => ssrImgs.forEach((img) => { img.style.display = 'none'; });
+		if (cur.complete && cur.naturalWidth) reveal();
+		else {
+			cur.onload = reveal;
+			cur.onerror = reveal;
+		}
+		bg.appendChild(nxt);
+		bg.appendChild(cur);
+
+		bannerStage = { bg, cur, nxt, lists, idx: 0, currentSrc: list[0] };
+		watchBannerTheme();
+
+		/* 空闲时预载轮换池其余图片 */
+		const preloadRest = () =>
+			[...lists.light, ...lists.dark].forEach((src) => {
+				const img = new Image();
+				img.src = src;
+			});
+		if ('requestIdleCallback' in window) window.requestIdleCallback(preloadRest);
+		else setTimeout(preloadRest, 2000);
+
+		const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+		bannerSwapTimer = window.setInterval(() => {
+			if (document.hidden || bannerShatterLock || !bannerStage) return;
+			const active = activeBannerList(lists);
+			if (active.length < 2) return;
+			const nextIdx = (bannerStage.idx + 1) % active.length;
+			const nextSrc = active[nextIdx];
+			if (bannerStage.cur.src === absUrl(nextSrc)) return;
+			/* 先预载完成再碎裂，避免碎完白屏 */
+			const probe = new Image();
+			probe.onload = () => {
+				if (!bannerStage) return;
+				bannerStage.idx = nextIdx;
+				if (reduced.matches) fadeBannerTo(nextSrc);
+				else runBannerShatter(nextSrc);
+			};
+			probe.src = nextSrc;
+		}, BANNER_SWAP_INTERVAL);
+	}
+
 	function initHomeBanner() {
 		const scrollButton = $('#scroll-to-main');
 		scrollButton?.addEventListener('click', () => {
@@ -1760,6 +2380,26 @@
 		document.title = `${audio.name}${audio.artist ? ` - ${audio.artist}` : ''}${suffix ? ` · ${suffix}` : ''}`;
 	}
 
+	/* 记录最近播放（音乐一级页「继续播放」卡读取） */
+	const writeMusicLastPlayed = (aplayer) => {
+		const audio = aplayer.list?.audios?.[aplayer.list.index];
+		if (!audio?.name) return;
+		try {
+			const params = new URLSearchParams(window.location.search);
+			localStorage.setItem(
+				'music-last-played',
+				JSON.stringify({
+					song: audio.name,
+					artist: audio.artist || '',
+					playlist: params.get('name') || $('#music-player')?.dataset.titleSuffix || t('music', '音乐'),
+					url: window.location.href,
+				}),
+			);
+		} catch {
+			/* ignore */
+		}
+	};
+
 	/* 移动端：menu 按钮切底部抽屉（撤掉 APlayer 原生的 list-hide 行为，以自己的 class 为准） */
 	function bindMusicMenuToggle() {
 		const menuBtn = document.querySelector('#music-player .aplayer-icon-menu');
@@ -1844,6 +2484,7 @@
 			aplayer.on('loadeddata', () => {
 				updateMusicBg();
 				updateMusicTitle(aplayer);
+				writeMusicLastPlayed(aplayer);
 			});
 			aplayer.on('error', showMusicError);
 			updateMusicBg();
@@ -1880,6 +2521,10 @@
 		player.setAttribute('server', server);
 		player.setAttribute('type', type);
 		player.setAttribute('id', id);
+		if (server === 'custom') {
+			/* 自建直链歌单：每个歌单对应构建期生成的静态 Meting JSON（src/data/custom-music/<id>.json），不走公共解析 API */
+			player.setAttribute('api', `/music/custom-songs/${encodeURIComponent(id)}.json`);
+		}
 		player.setAttribute('mutex', 'true');
 		player.setAttribute('preload', 'auto');
 		player.setAttribute('theme', 'var(--primary-color)');
@@ -2283,13 +2928,97 @@
 		}
 	}
 
+	/* 相册/音乐一级页：每次进入随机换一张模糊 banner 封面 */
+	function initRandomBanner() {
+		const img = $('#photos-banner-img') || $('#music-banner-img');
+		if (!img || !img.dataset.covers) return;
+		let covers = [];
+		try {
+			const parsed = JSON.parse(img.dataset.covers);
+			if (Array.isArray(parsed)) covers = parsed.map(String).filter(Boolean);
+		} catch {
+			return;
+		}
+		if (covers.length < 2) return;
+		const pick = covers[Math.floor(Math.random() * covers.length)];
+		if (pick) img.src = pick;
+	}
+
+	/* 相册一级页：照片盲盒，每次 page:view 随机抽一张 */
+	function initPhotosHome() {
+		const dataEl = document.getElementById('photos-pool-data');
+		const img = $('#photos-blindbox-img');
+		const link = $('#photos-blindbox-link');
+		const titleEl = $('#photos-blindbox-title');
+		const albumEl = $('#photos-blindbox-album');
+		if (!dataEl || !img || !link || !titleEl || !albumEl) return;
+		let pool = [];
+		try {
+			const parsed = JSON.parse(dataEl.textContent || '[]');
+			if (Array.isArray(parsed)) pool = parsed;
+		} catch {
+			return;
+		}
+		if (pool.length === 0) return;
+		const photo = pool[Math.floor(Math.random() * pool.length)];
+		img.src = photo.image;
+		img.alt = photo.title || '';
+		titleEl.textContent = photo.title || '';
+		albumEl.textContent = photo.albumName || '';
+		link.setAttribute('href', `/photos/${photo.slug}/`);
+	}
+
+	/* 音乐一级页：继续播放卡 + 随机歌单卡 */
+	function initMusicHome() {
+		const continueBox = $('#music-continue');
+		if (continueBox) {
+			let last = null;
+			try {
+				const parsed = JSON.parse(localStorage.getItem('music-last-played') || 'null');
+				if (parsed && typeof parsed === 'object' && parsed.song) last = parsed;
+			} catch {
+				/* ignore */
+			}
+			if (last) {
+				continueBox.innerHTML =
+					`<a href="${escapeAttr(last.url)}" class="block rounded-xl border border-rd-gray-alpha-400 bg-rd-gray-100 p-3 transition-colors hover:!border-primary">` +
+					`<span class="block truncate text-sm font-medium text-rd-gray-1000">${escapeAttr(last.song)}${last.artist ? `<span class="font-normal text-rd-gray-900"> - ${escapeAttr(last.artist)}</span>` : ''}</span>` +
+					`<span class="mt-1 block truncate text-xs text-rd-gray-900">${escapeAttr(last.playlist || t('music', '音乐'))}</span></a>`;
+			}
+		}
+
+		const randomBtn = $('#music-random-playlist');
+		if (randomBtn && !randomBtn.dataset.wired) {
+			randomBtn.dataset.wired = 'true';
+			randomBtn.addEventListener('click', (event) => {
+				const dataEl = document.getElementById('music-home-playlists-data');
+				let urls = [];
+				try {
+					const parsed = JSON.parse(dataEl?.textContent || '[]');
+					if (Array.isArray(parsed)) urls = parsed.filter(Boolean);
+				} catch {
+					/* ignore */
+				}
+				if (urls.length === 0) return;
+				event.preventDefault();
+				const url = urls[Math.floor(Math.random() * urls.length)];
+				if (window.swup && typeof window.swup.loadPage === 'function') window.swup.loadPage({ url });
+				else window.location.href = url;
+			});
+		}
+	}
+
 	function initPage() {
 		initPageType();
+		initRandomBanner();
+		initPhotosHome();
+		initMusicHome();
 		cleanupMusicPage();
 		initNavbarPage();
 		initSideTools();
 		initSidebarClamp();
 		initHomeBanner();
+		initBannerSwapper();
 		initTyped();
 		relativeTimeInHome();
 		initTOC();

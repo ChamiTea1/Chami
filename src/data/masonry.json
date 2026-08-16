@@ -126,5 +126,76 @@
 				"height": 2160
 			}
 		]
+	},
+	{
+		"name": "小蛋糕",
+		"slug": "cake",
+		"description": "COSER 小蛋糕 的写真合集",
+		"cover": "/images/cake/cake-02.jpg",
+		"items": [
+			{
+				"image": "/images/cake/cake-01.jpg",
+				"title": "小蛋糕 01",
+				"description": "",
+				"width": 1931,
+				"height": 4291
+			},
+			{
+				"image": "/images/cake/cake-02.jpg",
+				"title": "小蛋糕 02",
+				"description": "",
+				"width": 1080,
+				"height": 2337
+			},
+			{
+				"image": "/images/cake/cake-03.jpg",
+				"title": "小蛋糕 03",
+				"description": "",
+				"width": 1080,
+				"height": 2338
+			},
+			{
+				"image": "/images/cake/cake-04.jpg",
+				"title": "小蛋糕 04",
+				"description": "",
+				"width": 720,
+				"height": 1280
+			},
+			{
+				"image": "/images/cake/cake-05.jpg",
+				"title": "小蛋糕 05",
+				"description": "",
+				"width": 800,
+				"height": 800
+			},
+			{
+				"image": "/images/cake/cake-06.jpg",
+				"title": "小蛋糕 06",
+				"description": "",
+				"width": 720,
+				"height": 960
+			},
+			{
+				"image": "/images/cake/cake-07.jpg",
+				"title": "小蛋糕 07",
+				"description": "",
+				"width": 720,
+				"height": 1280
+			},
+			{
+				"image": "/images/cake/cake-08.jpg",
+				"title": "小蛋糕 08",
+				"description": "",
+				"width": 1200,
+				"height": 1600
+			},
+			{
+				"image": "/images/cake/cake-09.webp",
+				"title": "小蛋糕 09",
+				"description": "",
+				"width": 1440,
+				"height": 1920
+			}
+		]
 	}
 ]

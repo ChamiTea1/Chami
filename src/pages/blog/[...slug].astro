@@ -74,14 +74,8 @@ const updatedIso = (data.updatedDate ?? data.pubDate).toISOString();
 						class="h-full w-full scale-125 object-cover blur-[16px] dark:brightness-75 dark:saturate-[0.85]"
 					/>
 				)}
-				<div
-					class="absolute inset-0 dark:hidden"
-					style="background: linear-gradient(to bottom, color-mix(in srgb, var(--rd-background-100) 22%, transparent), color-mix(in srgb, var(--rd-background-100) 62%) 55%, var(--rd-background-100) 100%);"
-				></div>
-				<div
-					class="absolute inset-0 hidden dark:block"
-					style="background: linear-gradient(to bottom, color-mix(in srgb, var(--rd-background-100) 40%, transparent), color-mix(in srgb, var(--rd-background-100) 72%) 55%, var(--rd-background-100) 100%);"
-				></div>
+				<div class="page-banner-overlay page-banner-overlay-light dark:hidden"></div>
+				<div class="page-banner-overlay page-banner-overlay-dark hidden dark:block"></div>
 			</div>
 		)
 	}

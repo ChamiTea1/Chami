@@ -98,8 +98,14 @@ export const themeConfig = {
 		enable: true,
 		style: 'fixed' as 'static' | 'fixed',
 		image: {
-			light: '/images/wallhaven-wqery6-light.webp',
-			dark: '/images/wallhaven-wqery6-dark.webp',
+			light: [
+				'/images/wallhaven-wqery6-light.webp',
+				'/images/wallpapers/japan-artistic.jpg',
+				'/images/wallpapers/kawaii-cat-girl.webp',
+				'/images/wallpapers/love-heart-tree.jpg',
+				'/images/wallpapers/milky-way.jpg',
+			],
+			dark: ['/images/wallhaven-wqery6-dark.webp'],
 		},
 		title: "坠入无边黑暗，携光而来拯救之",
 		subtitle: {
