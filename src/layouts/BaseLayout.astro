@@ -332,7 +332,21 @@ const injectFooter = (themeConfig.inject.enable ? themeConfig.inject.footer : []
 						'<script src="/scripts/SwupScrollPlugin.min.js"></script>',
 						'<script src="/scripts/SwupSlideTheme.min.js"></script>',
 						'<script src="/scripts/SwupPreloadPlugin.min.js"></script>',
-						'<script>window.swup = new Swup({ plugins: [new SwupScriptsPlugin({ optin: true }), new SwupProgressPlugin(), new SwupScrollPlugin({ offset: 80 }), new SwupSlideTheme({ mainElement: "#page-content" }), new SwupPreloadPlugin()], containers: ["#swup"] });</script>',
+						'<script>(function(){' +
+					// 精简版 SwupHeadPlugin：swup 单页导航时合并新页面的 <link rel=stylesheet> / <style> 到 head，
+					// 避免按页打包的 CSS（相册扇形、音乐沉浸页等）在导航后缺失、必须手动刷新。
+					'const keyOf=(el)=>{const n=el.tagName;if(n==="LINK")return n+"|"+el.getAttribute("rel")+"|"+el.getAttribute("href");if(n==="STYLE")return n+"|"+(el.getAttribute("data-astro-cid")||el.getAttribute("data-vite-dev-id")||el.textContent.slice(0,80));return null;};' +
+					'const waitLoad=(el)=>new Promise((res)=>{if(el.tagName!=="LINK"||el.rel!=="stylesheet"||!el.href){res();return;}const done=()=>res();el.addEventListener("load",done,{once:true});el.addEventListener("error",done,{once:true});setTimeout(done,2500);});' +
+					'const mergeHead=async (visit,{page})=>{' +
+					'try{const doc=new DOMParser().parseFromString(page.html,"text/html");const cur=Array.from(document.head.children);const next=Array.from(doc.head.children);const keys=new Set(next.map(keyOf).filter(Boolean));' +
+					'cur.forEach((el)=>{const k=keyOf(el);if(!k)return;if((el.tagName==="LINK"||el.tagName==="STYLE")&&!keys.has(k))el.remove();});' +
+					'const add=[];next.forEach((el)=>{const k=keyOf(el);if(!k)return;if((el.tagName==="LINK"||el.tagName==="STYLE")&&!cur.some((c)=>keyOf(c)===k)){document.head.appendChild(el);add.push(el);}});' +
+					'if(doc.documentElement.lang)document.documentElement.lang=doc.documentElement.lang;' +
+					'await Promise.race([Promise.all(add.map(waitLoad)),new Promise((r)=>setTimeout(r,2500))]);' +
+					'}catch(e){}};' +
+					'window.SwupHeadStyles={name:"SwupHeadStyles",isSwupPlugin:true,mount(){this.swup.hooks.on("content:replace",mergeHead);},unmount(){}};' +
+					'})();</script>',
+					'<script>window.swup = new Swup({ plugins: [SwupHeadStyles, new SwupScriptsPlugin({ optin: true }), new SwupProgressPlugin(), new SwupScrollPlugin({ offset: 80 }), new SwupSlideTheme({ mainElement: "#page-content" }), new SwupPreloadPlugin()], containers: ["#swup"] });</script>',
 					].join('')}
 				/>
 			)
