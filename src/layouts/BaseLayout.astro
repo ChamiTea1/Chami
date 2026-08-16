@@ -337,10 +337,14 @@ const injectFooter = (themeConfig.inject.enable ? themeConfig.inject.footer : []
 					// 避免按页打包的 CSS（相册扇形、音乐沉浸页等）在导航后缺失、必须手动刷新。
 					'const keyOf=(el)=>{const n=el.tagName;if(n==="LINK")return n+"|"+el.getAttribute("rel")+"|"+el.getAttribute("href");if(n==="STYLE")return n+"|"+(el.getAttribute("data-astro-cid")||el.getAttribute("data-vite-dev-id")||el.textContent.slice(0,80));return null;};' +
 					'const waitLoad=(el)=>new Promise((res)=>{if(el.tagName!=="LINK"||el.rel!=="stylesheet"||!el.href){res();return;}const done=()=>res();el.addEventListener("load",done,{once:true});el.addEventListener("error",done,{once:true});setTimeout(done,2500);});' +
+					// 只管理"按页样式"：构建产物 /_astro/ 样式链接、带 Astro/Vite 标记的 <style>、
+					// 以及本插件自己补进来的样式；运行时注入的 <style>（SwupSlideTheme/ProgressPlugin/
+					// Typed/mermaid/waline 等）绝不动，否则首次导航后全站过渡动画样式会被误删。
+					'const isManaged=(el)=>{if(el.tagName==="LINK")return el.getAttribute("rel")==="stylesheet"&&(el.getAttribute("href")||"").includes("/_astro/");if(el.tagName==="STYLE")return el.hasAttribute("data-astro-cid")||el.hasAttribute("data-vite-dev-id")||el.hasAttribute("data-swup-head-styles");return false;};' +
 					'const mergeHead=async (visit,{page})=>{' +
 					'try{const doc=new DOMParser().parseFromString(page.html,"text/html");const cur=Array.from(document.head.children);const next=Array.from(doc.head.children);const keys=new Set(next.map(keyOf).filter(Boolean));' +
-					'cur.forEach((el)=>{const k=keyOf(el);if(!k)return;if((el.tagName==="LINK"||el.tagName==="STYLE")&&!keys.has(k))el.remove();});' +
-					'const add=[];next.forEach((el)=>{const k=keyOf(el);if(!k)return;if((el.tagName==="LINK"||el.tagName==="STYLE")&&!cur.some((c)=>keyOf(c)===k)){document.head.appendChild(el);add.push(el);}});' +
+					'cur.forEach((el)=>{if(!isManaged(el))return;const k=keyOf(el);if(k&&!keys.has(k))el.remove();});' +
+					'const add=[];next.forEach((el)=>{const k=keyOf(el);if(!k)return;if((el.tagName==="LINK"||el.tagName==="STYLE")&&!cur.some((c)=>keyOf(c)===k)){el.setAttribute("data-swup-head-styles","");document.head.appendChild(el);add.push(el);}});' +
 					'if(doc.documentElement.lang)document.documentElement.lang=doc.documentElement.lang;' +
 					'await Promise.race([Promise.all(add.map(waitLoad)),new Promise((r)=>setTimeout(r,2500))]);' +
 					'}catch(e){}};' +

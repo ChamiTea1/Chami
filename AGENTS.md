@@ -22,6 +22,8 @@ Astro 7 + Tailwind CSS v4 的个人博客，移植自 [hexo-theme-redefine](http
 
 `single_page: true`（当前配置）时，SwupScriptsPlugin 为 `optin: true` 模式：页面 slot 里通过 `<script src="...">` 引入的第三方脚本**必须加 `data-swup-reload-script` 属性**，否则前端路由切换进该页面时脚本不执行（参考 `src/components/Comments.astro` 的写法）。
 
+另外 BaseLayout 里内置了一个精简版 head 合并插件（`SwupHeadStyles`，挂 `content:replace`）：导航时把新页面的按页样式（`/_astro/` 链接、Astro/Vite 内联样式）补进 head 并等其加载，否则相册扇形、音乐沉浸页等按页 CSS 在 SPA 进入时丢失。它的删除逻辑**只清理这些受管样式**，绝不能扩大到运行时注入的 `<style>`（SwupSlideTheme/ProgressPlugin/Typed/mermaid/waline 都靠它们工作）。
+
 ## 内容写作约定
 
 - 文章放 `src/content/blog/`，`pubDate` 用 ISO 格式带时区（如 `2026-08-13T17:30:00+08:00`），不要用空格分隔的非标准格式。
@@ -34,7 +36,11 @@ Astro 7 + Tailwind CSS v4 的个人博客，移植自 [hexo-theme-redefine](http
   - 字段：`name`（歌单名）、`server`（`netease` 网易云 / `tencent` QQ音乐）、`type`（`playlist` 歌单，或 `song` 单曲、`id` 可逗号分隔多首）、`id`、`cover`（可选封面 URL）。
   - 取歌单 ID：网易云 `https://music.163.com/#/playlist?id=2426530028` → `2426530028`；QQ音乐 `https://y.qq.com/n/ryqq/playlist/12345` → `12345`。
   - 查歌单名称与封面：`curl "https://music.163.com/api/v6/playlist/detail?id=<ID>"`（取 `playlist.name` 与 `playlist.coverImgUrl`）；封面也可按图片规范放 `public/images/` 或图床。
-- 修改 `music.json` 后重新构建部署即可生效；播放页播放器由 `public/scripts/main.js` 的 `initMusicPlay`/`initMusicTools` 动态创建（切换/随机/刷新按钮、随歌曲切换的模糊背景）。
+- 修改 `music.json` 后重新构建部署即可生效；播放页播放器由 `public/scripts/main.js` 的 `initMusicPlay`/`initMusicTools` 动态创建（切换/随机/刷新按钮、随歌曲切换的模糊背景、键盘控制、加载失败错误层）。
+  - 播放页 URL（`server/type/id/name/cover` 参数）生成逻辑统一在 `src/utils/music.ts` 的 `musicPlayUrl()`，`music.astro` 和 `music/play.astro` 共用，不要再手写副本。
+  - 歌单数据经 play.astro 内 `<script type="application/json" id="music-playlists-data">` 注入（swup 替换 #swup 后仍可读）；若改用内联可执行脚本必须加 `data-swup-reload-script`，否则 SPA 进入时不执行。
+  - 模糊背景靠 MutationObserver 盯 `.aplayer-pic` 的 style 变化更新；离开播放页/重建播放器时必须 `destroy()` 实例并断开 observer（`destroyMusicPlayer`）。
+  - 移动端（≤768px）歌单是底部抽屉：自有 class `music-list-open` 控制滑出（不要用 APlayer 原生的 `aplayer-list-hide`，bundled aplayer.css 里它是 `display:none !important`）。
 
 ## 开发
 
