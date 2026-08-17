@@ -23,6 +23,7 @@ const isCurrent = (path: string) => {
 	id="navbar"
 	class:list={[
 		'navbar flex h-full w-full box-border items-center justify-center px-6 pt-0.5 font-display backdrop-blur-md [background:var(--nav-color-bg)] shadow-rd border border-rd-gray-alpha-400/30 md:px-12',
+		isHome && 'navbar-home',
 	]}
 >
 	<div data-navbar-content data-navbar-width={isHome ? 'home' : 'pages'} class="relative z-30 flex h-full w-full flex-row items-center justify-between transition-[max-width] duration-300 ease-out">
@@ -32,7 +33,7 @@ const isCurrent = (path: string) => {
 					<img src={themeConfig.defaults.logo} alt={siteConfig.title} class="h-full w-full rounded-sm" />
 				</a>
 			)}
-			<a data-navbar-close class="translate-y-px font-title text-xl leading-none font-medium text-rd-gray-1000 sm:text-2xl" href="/">
+			<a data-navbar-close class:list={['translate-y-px font-title text-xl leading-none font-medium sm:text-2xl', isHome ? 'text-home-navbar' : 'text-rd-gray-1000']} href="/">
 				{isHome ? <h1 class="m-0 text-inherit leading-[inherit] font-[inherit]">{siteConfig.title}</h1> : siteConfig.title}
 			</a>
 		</div>
@@ -47,13 +48,13 @@ const isCurrent = (path: string) => {
 						return (
 							<li class:list={[hasSubmenus && 'navbar-dropdown group', 'relative cursor-pointer text-base font-medium text-rd-gray-1000']}>
 								{hasSubmenus ? (
-									<button type="button" class="navbar-link relative block p-1 text-rd-gray-1000 [&_i]:!text-inherit">
+									<button type="button" class:list={['navbar-link relative block p-1 [&_i]:!text-inherit', isHome ? 'text-home-navbar' : 'text-rd-gray-1000']}>
 										{link.icon && <i class={`${link.icon} fa-fw`}></i>}
 										{linkText}
 										<i class="navbar-chevron fa-solid fa-chevron-down fa-fw transition-transform duration-300"></i>
 									</button>
 								) : (
-									<a class="navbar-link relative block p-1 text-rd-gray-1000 [&_i]:!text-inherit" href={link.path} aria-current={isActive ? 'page' : undefined}>
+									<a class:list={['navbar-link relative block p-1 [&_i]:!text-inherit', isHome ? 'text-home-navbar' : 'text-rd-gray-1000']} href={link.path} aria-current={isActive ? 'page' : undefined}>
 										{link.icon && <i class={`${link.icon} fa-fw`}></i>}
 										{linkText}
 									</a>
@@ -80,7 +81,7 @@ const isCurrent = (path: string) => {
 							data-search-trigger
 							aria-label={__('search')}
 							title={__('search')}
-							class="flex h-8 w-8 items-center justify-center text-2xl text-rd-gray-1000 hover:text-primary [&_i]:!text-inherit"
+							class:list={['flex h-8 w-8 items-center justify-center text-2xl hover:text-primary [&_i]:!text-inherit', isHome ? 'text-home-navbar' : 'text-rd-gray-1000']}
 						>
 							<i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
 						</button>
@@ -95,7 +96,7 @@ const isCurrent = (path: string) => {
 						data-search-trigger
 						aria-label={__('search')}
 						title={__('search')}
-						class="relative ml-3 flex h-10 w-10 items-center justify-center text-lg text-rd-gray-1000 first:ml-0 [&_i]:!text-inherit"
+						class:list={['relative ml-3 flex h-10 w-10 items-center justify-center text-lg first:ml-0 [&_i]:!text-inherit', isHome ? 'text-home-navbar' : 'text-rd-gray-1000']}
 					>
 						<i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
 					</button>
@@ -107,7 +108,7 @@ const isCurrent = (path: string) => {
 					aria-expanded="false"
 					aria-label="Navigation"
 					title="Navigation"
-					class="relative ml-3 flex h-10 w-10 items-center justify-center text-rd-gray-1000 first:ml-0"
+					class:list={['relative ml-3 flex h-10 w-10 items-center justify-center first:ml-0', isHome ? 'text-home-navbar' : 'text-rd-gray-1000']}
 				>
 					<span class="navbar-toggle-line" aria-hidden="true"></span>
 				</button>

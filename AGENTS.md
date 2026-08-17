@@ -85,8 +85,6 @@ astro dev --background
 - 相册照片注意 EXIF 隐私：公开前剥离 GPS 定位信息；如需在图片查看器中展示拍摄参数，保留相机/光圈/快门等字段但删除 GPS。
 - 部署目标是 Cloudflare Pages：注意单部署 20000 文件、单文件 ≤ 25 MiB 的限制。
 
-## 部署前检查清单
+## 部署
 
-- `src/config.ts` 的 `url` 已设为 `https://chami.asia`（2026-08-15）；若换域名改这里并重新构建。
-- `src/data/` 的 essays/friends/bookmarks 目前是中文示例数据，上线前替换为真实内容。
-- 确认 favicon 指向（当前配置指向外部图床头像，`public/favicon.ico`/`favicon.svg` 未被引用）。
+- 凡是对项目做了修改，都要提交推送至github 

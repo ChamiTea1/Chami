@@ -102,7 +102,6 @@ export const themeConfig = {
 				'/images/wallhaven-wqery6-light.webp',
 				'/images/wallpapers/japan-artistic.jpg',
 				'/images/wallpapers/kawaii-cat-girl.webp',
-				'/images/wallpapers/love-heart-tree.jpg',
 				'/images/wallpapers/milky-way.jpg',
 			],
 			dark: ['/images/wallhaven-wqery6-dark.webp'],
@@ -133,6 +132,46 @@ export const themeConfig = {
 			title_size: '2.8rem',
 			subtitle_size: '1.5rem',
 			line_height: '1.2',
+		},
+		/* 首页 banner 消散特效全部可调参数（注入到页面后由 main.js 读取） */
+		shatter: {
+			interval: 8000, // 换图间隔 ms
+			cols: 33, // 桌面碎片列数
+			rows: 33, // 桌面碎片行数
+			small_cols: 10, // 小屏碎片列数
+			small_rows: 64, // 小屏碎片行数
+			fallback_cols: 45, // DOM 回退（无 WebGL2）碎片列数
+			fallback_rows: 28,
+			fallback_small_cols: 23,
+			fallback_small_rows: 14,
+			wind_angles: [45, 135, 225, 315, 0, 180], // 风向候选角度（四对角 + 左右水平）
+			wind_jitter: 12, // 风向随机抖动 ±°
+			sweep: 1200, // 侵蚀前沿扫描时长 ms
+			delay_jitter: 150, // 起爆延迟随机抖动 ms
+			dur: 800, // 单碎片消散时长基础 ms
+			dur_range: 600, // 消散时长随机增量 ms
+			drift: 500, // 风向卷走距离基础 px
+			drift_range: 600, // 卷走距离随机增量 px
+			sway: 120, // 垂直风向飘摆范围 px
+			dy_jitter: 60, // 上下扰动范围 px
+			tumble: 80, // 3D 翻滚角度范围（±40°）
+			spin: 540, // 平面旋转范围（±270°）
+			scale_min: 0.3, // 碎片缩小范围
+			scale_max: 0.65,
+			jag: 14, // 缺口幅度 %
+			cut_chance: 0.95, // 切角概率
+			cut_min: 0.5, // 切深下限（占边长比例）
+			cut_max: 0.8, // 切深上限
+			wind_freq_min: 5, // 摆动频率范围
+			wind_freq_max: 13,
+			wind_amp_min: 6, // 摆动幅度范围 px
+			wind_amp_max: 20,
+			wind_lift_min: 20, // 托起高度范围 px
+			wind_lift_max: 60,
+			perspective: 900, // 透视焦距 px
+			luma_title: 110, // 标题文字亮度阈值（< 阈值用亮字）
+			luma_navbar: 128, // 导航文字亮度阈值
+			slogan_fade: 800, // 大标题淡入淡出时长 ms
 		},
 		custom_font: {
 			enable: false,

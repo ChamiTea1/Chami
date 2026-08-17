@@ -46,7 +46,8 @@
     left: 0;
     width: 18px;
     height: 2.5px;
-    background: var(--rd-gray-1000);
+    background: var(--home-navbar-text-color, var(--rd-gray-1000));
+    transition: background-color 0.6s ease;
   }
 
   .navbar-toggle-line {
@@ -57,7 +58,7 @@
   .navbar-toggle-line::before,
   .navbar-toggle-line::after {
     content: "";
-    transition: transform 0.38s ease;
+    transition: transform 0.38s ease, background-color 0.6s ease;
   }
 
   .navbar-toggle-line::before {

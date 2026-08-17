@@ -60,7 +60,7 @@ const bannerImageDark = firstImage(banner.image.dark);
 			>
 				<div class="transition-fade-down relative flex min-h-svh box-border flex-col items-center justify-center">
 					<div class="home-title flex w-screen flex-col items-center justify-center text-center text-[length:var(--home-title-size)] leading-[var(--home-line-height)] font-medium text-home-banner-text-color">
-						<div class="tracking-tight">{banner.title}</div>
+						<div class="home-banner-slogan tracking-tight">{banner.title}</div>
 						{showSubtitle && (
 							<p>
 								<i id="subtitle"></i>
@@ -150,4 +150,5 @@ const bannerImageDark = firstImage(banner.image.dark);
 			</section>
 		)
 	}
+	<script type="application/json" id="home-banner-shatter-config" set:html={JSON.stringify(banner.shatter ?? {})} />
 </div>

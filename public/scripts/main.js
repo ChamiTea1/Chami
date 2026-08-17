@@ -307,8 +307,78 @@
 
 	/* 首页 banner 多图轮换 + 玻璃击碎特效：每 8s 换一张，
 	   旧图从随机撞击点波纹式碎成不规则多边形、3D 翻滚抛散下坠，新图垫底静止；
-	   破碎由 WebGL2 单 canvas 实例化渲染（GPU 结算，主线程零开销），无 WebGL2 时回退 DOM 碎片 */
-	const BANNER_SWAP_INTERVAL = 8000;
+	   破碎由 WebGL2 单 canvas 实例化渲染（GPU 结算，主线程零开销），无 WebGL2 时回退 DOM 碎片。
+	   全部可调参数见 src/config.ts 的 home_banner.shatter，经 HomeBanner 注入 JSON 后在此读取 */
+	const BANNER_SHATTER_DEFAULTS = {
+		interval: 8000,
+		cols: 33,
+		rows: 33,
+		small_cols: 10,
+		small_rows: 64,
+		fallback_cols: 45,
+		fallback_rows: 28,
+		fallback_small_cols: 23,
+		fallback_small_rows: 14,
+		wind_angles: [45, 135, 225, 315, 0, 180],
+		wind_jitter: 12,
+		sweep: 1200,
+		delay_jitter: 150,
+		dur: 800,
+		dur_range: 600,
+		drift: 500,
+		drift_range: 600,
+		sway: 120,
+		dy_jitter: 60,
+		tumble: 80,
+		spin: 540,
+		scale_min: 0.3,
+		scale_max: 0.65,
+		jag: 14,
+		cut_chance: 0.95,
+		cut_min: 0.5,
+		cut_max: 0.8,
+		wind_freq_min: 5,
+		wind_freq_max: 13,
+		wind_amp_min: 6,
+		wind_amp_max: 20,
+		wind_lift_min: 20,
+		wind_lift_max: 60,
+		perspective: 900,
+		luma_title: 110,
+		luma_navbar: 128,
+		slogan_fade: 800,
+	};
+	let bannerShatterCfg = null;
+	const readBannerShatterConfig = () => {
+		if (bannerShatterCfg) return bannerShatterCfg;
+		let cfg = BANNER_SHATTER_DEFAULTS;
+		try {
+			const el = document.getElementById('home-banner-shatter-config');
+			if (el?.textContent) cfg = { ...BANNER_SHATTER_DEFAULTS, ...JSON.parse(el.textContent) };
+		} catch (err) {
+			/* 配置缺失/解析失败时用默认值 */
+		}
+		/* 数量类字段至少为 1；范围字段保证 min ≤ max */
+		['cols', 'rows', 'small_cols', 'small_rows', 'fallback_cols', 'fallback_rows', 'fallback_small_cols', 'fallback_small_rows'].forEach(
+			(k) => (cfg[k] = Math.max(1, Math.round(Number(cfg[k]) || 1))),
+		);
+		cfg.scale_min = Math.min(0.99, Math.max(0.01, Number(cfg.scale_min) || 0.3));
+		cfg.scale_max = Math.max(cfg.scale_min, Math.min(1, Number(cfg.scale_max) || 0.65));
+		[
+			['dur', 'dur_range'],
+			['drift', 'drift_range'],
+			['wind_freq_min', 'wind_freq_max'],
+			['wind_amp_min', 'wind_amp_max'],
+			['wind_lift_min', 'wind_lift_max'],
+			['cut_min', 'cut_max'],
+		].forEach(([a, b]) => {
+			cfg[a] = Number(cfg[a]);
+			cfg[b] = Number(cfg[b]);
+			if (!(cfg[b] > cfg[a])) cfg[b] = cfg[a];
+		});
+		bannerShatterCfg = cfg;
+		return cfg;
+	};
 	let bannerSwapTimer = null;
 	let bannerShatterLock = false;
 	let bannerThemeObserver = null;
@@ -339,6 +409,67 @@
 		return { dw, dh, ox: (w - dw) / 2, oy: (h - dh) / 2 };
 	};
 
+	/* 按图亮度自适应文字颜色：暗图 → 亮字，亮图 → 深字。
+	   顶部导航看上缘亮度（导航条压在图上缘），大标题/副标题看中部亮度（两行文字居中） */
+	const bannerLumaCache = new Map();
+
+	const bannerLuma = (src, img) =>
+		new Promise((resolve) => {
+			const finish = () => {
+				try {
+					const cv = document.createElement('canvas');
+					cv.width = 64;
+					cv.height = 36;
+					const ctx = cv.getContext('2d', { willReadFrequently: true });
+					ctx.drawImage(el, 0, 0, 64, 36);
+					const d = ctx.getImageData(0, 0, 64, 36).data;
+					let full = 0;
+					let top = 0;
+					let mid = 0;
+					for (let y = 0; y < 36; y++) {
+						for (let x = 0; x < 64; x++) {
+							const i = (y * 64 + x) * 4;
+							const l = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+							full += l;
+							if (y < 9) top += l;
+							if (y >= 14 && y < 22) mid += l;
+						}
+					}
+					resolve({ full: full / 2304, top: top / 576, mid: mid / 512 });
+				} catch (err) {
+					resolve(null);
+				}
+			};
+			const el = img || new Image();
+			if (!img) el.src = src;
+			if (el.complete && el.naturalWidth) finish();
+			else {
+				/* 用 addEventListener，避免覆盖该 img 已有的 onload（如 cur 的 reveal） */
+				el.addEventListener('load', finish, { once: true });
+				el.addEventListener('error', () => resolve(null), { once: true });
+			}
+		});
+
+	const applyBannerTextColors = (src, img) => {
+		const abs = absUrl(src);
+		let p = bannerLumaCache.get(abs);
+		if (!p) {
+			p = bannerLuma(src, img);
+			bannerLumaCache.set(abs, p);
+		}
+		p.then((luma) => {
+			if (!luma || !bannerStage) return;
+			if (absUrl(bannerStage.currentSrc) !== abs) return; /* 图已切换，丢弃过期结果 */
+			const dark = document.documentElement.classList.contains('dark');
+			const lightText = dark ? '#d1d1b6' : '#ffffff';
+			const darkText = 'var(--rd-gray-1000)';
+			const style = document.documentElement.style;
+			const cfg = readBannerShatterConfig();
+			style.setProperty('--home-banner-text-color', luma.mid < cfg.luma_title ? lightText : darkText);
+			style.setProperty('--home-navbar-text-color', luma.top < cfg.luma_navbar ? lightText : darkText);
+		});
+	};
+
 	function stopBannerSwapper() {
 		if (bannerSwapTimer) {
 			window.clearInterval(bannerSwapTimer);
@@ -352,11 +483,23 @@
 		bannerShatterLock = false;
 	}
 
+	/* 大标题只在每轮的第一张封面展示：当前图是第一张时淡入，其余封面隐藏 */
+	const updateBannerSlogan = () => {
+		const slogan = document.querySelector('#home-banner .home-banner-slogan');
+		if (!slogan || !bannerStage) return;
+		document.documentElement.style.setProperty('--home-banner-slogan-fade', `${readBannerShatterConfig().slogan_fade}ms`);
+		const list = activeBannerList(bannerStage.lists);
+		const show = list.length > 0 && absUrl(bannerStage.currentSrc) === absUrl(list[0]);
+		slogan.classList.toggle('is-hidden', !show);
+	};
+
 	/* 纯淡入淡出：prefers-reduced-motion 降级、暗色切换换池时使用 */
 	function fadeBannerTo(nextSrc) {
 		const stage = bannerStage;
 		if (!stage) return;
 		stage.currentSrc = nextSrc;
+		applyBannerTextColors(nextSrc);
+		updateBannerSlogan();
 		const { cur, nxt } = stage;
 		if (bannerShatterLock) {
 			/* 碎裂进行中：cur 已隐藏，直接瞬时切换（清理时会从 currentSrc 收尾） */
@@ -470,13 +613,13 @@ uniform sampler2D uTex;
 out vec4 fragColor;
 void main() { fragColor = texture(uTex, vUV) * vAlpha; }`;
 
-	/* 生成全部碎片参数（GL 与 DOM 回退共用一套随机量） */
+	/* 生成全部碎片参数（GL 与 DOM 回退共用一套随机量；数值来自 config.ts 的 home_banner.shatter） */
 	const buildBannerShards = (wx, wy, px, py, minProj, projRange, cols, rows, cw, ch) => {
-		/* 抖动缺口延迟到起爆时才出现（静止时碎片层 = 完美无缝复刻原图，不提前破碎）；
-		   缺口幅度按碎片大小同比放大（6% → 14%），保持锯齿的绝对观感 */
-		const jag = () => Number((Math.random() * 14).toFixed(1));
-		/* 切角深度：每角 65% 概率被切，深度为所在边长的 15-45%（角顺序 TL,TR,BR,BL） */
-		const cut = (len) => (Math.random() < 0.95 ? (0.5 + Math.random() * 0.3) * len : 0);
+		const cfg = readBannerShatterConfig();
+		/* 抖动缺口延迟到起爆时才出现（静止时碎片层 = 完美无缝复刻原图，不提前破碎） */
+		const jag = () => Number((Math.random() * cfg.jag).toFixed(1));
+		/* 切角深度：概率 cfg.cut_chance，深度为所在边长的 cut_min~cut_max（角顺序 TL,TR,BR,BL） */
+		const cut = (len) => (Math.random() < cfg.cut_chance ? (cfg.cut_min + Math.random() * (cfg.cut_max - cfg.cut_min)) * len : 0);
 		const shards = [];
 		for (let y = 0; y < rows; y++) {
 			for (let x = 0; x < cols; x++) {
@@ -484,17 +627,17 @@ void main() { fragColor = texture(uTex, vUV) * vAlpha; }`;
 				const top = Math.round(y * ch);
 				const tw = Math.ceil(cw) + 2;
 				const th = Math.ceil(ch) + 2;
-				/* 侵蚀式破碎前沿：延迟按碎片在风向上的投影排序（扫描窗口 1200ms ≈ 消散时长） */
+				/* 侵蚀式破碎前沿：延迟按碎片在风向上的投影排序（扫描窗口 sweep ≈ 消散时长） */
 				const projCx = x * cw + cw / 2;
 				const projCy = y * ch + ch / 2;
-				const delay = ((projCx * wx + projCy * wy - minProj) / projRange) * 1200 + Math.random() * 150;
-				const dur = 800 + Math.random() * 600;
-				/* 被风吹走：脱离前沿后沿风向长距离卷走（500-1100px），
-				   叠加横向飘摆与小幅上下扰动，配合着色器里的托起/摆动呈现吹拂感 */
-				const drift = 500 + Math.random() * 600;
-				const sway = (Math.random() - 0.5) * 120;
+				const delay = ((projCx * wx + projCy * wy - minProj) / projRange) * cfg.sweep + Math.random() * cfg.delay_jitter;
+				const dur = cfg.dur + Math.random() * cfg.dur_range;
+				/* 被风吹走：脱离前沿后沿风向长距离卷走，叠加横向飘摆与小幅上下扰动，
+				   配合着色器里的托起/摆动呈现吹拂感 */
+				const drift = cfg.drift + Math.random() * cfg.drift_range;
+				const sway = (Math.random() - 0.5) * cfg.sway;
 				const dx = wx * drift + px * sway;
-				const dy = wy * drift + py * sway + (Math.random() - 0.5) * 60;
+				const dy = wy * drift + py * sway + (Math.random() - 0.5) * cfg.dy_jitter;
 				shards.push({
 					left,
 					top,
@@ -506,18 +649,18 @@ void main() { fragColor = texture(uTex, vUV) * vAlpha; }`;
 					dur,
 					dx,
 					dy,
-					rx: (Math.random() - 0.5) * 80,
-					ry: (Math.random() - 0.5) * 80,
-					rz: (Math.random() - 0.5) * 540, /* 翻滚抖动 */
-					scale: 0.3 + Math.random() * 0.35,
+					rx: (Math.random() - 0.5) * cfg.tumble,
+					ry: (Math.random() - 0.5) * cfg.tumble,
+					rz: (Math.random() - 0.5) * cfg.spin, /* 翻滚抖动 */
+					scale: cfg.scale_min + Math.random() * (cfg.scale_max - cfg.scale_min),
 					jag: [jag(), jag(), jag(), jag()],
 					cutH: [cut(tw), cut(tw), cut(tw), cut(tw)], /* 每角沿水平边的切深 */
 					cutV: [cut(th), cut(th), cut(th), cut(th)], /* 每角沿竖直边的切深 */
 					/* 吹拂参数：摆动相位/频率/幅度、被风托起的高度（仅 WebGL 路径使用） */
 					windPhase: Math.random() * Math.PI * 2,
-					windFreq: 5 + Math.random() * 8,
-					windAmp: 6 + Math.random() * 14,
-					windLift: 20 + Math.random() * 40,
+					windFreq: cfg.wind_freq_min + Math.random() * (cfg.wind_freq_max - cfg.wind_freq_min),
+					windAmp: cfg.wind_amp_min + Math.random() * (cfg.wind_amp_max - cfg.wind_amp_min),
+					windLift: cfg.wind_lift_min + Math.random() * (cfg.wind_lift_max - cfg.wind_lift_min),
 				});
 			}
 		}
@@ -643,7 +786,7 @@ void main() { fragColor = texture(uTex, vUV) * vAlpha; }`;
 			gl.uniform2f(gl.getUniformLocation(prog, 'uCenter'), w / 2, h / 2);
 			gl.uniform2f(gl.getUniformLocation(prog, 'uHalf'), w / 2, h / 2);
 			gl.uniform2f(gl.getUniformLocation(prog, 'uPerp'), px, py);
-			gl.uniform1f(gl.getUniformLocation(prog, 'uFocal'), 900);
+			gl.uniform1f(gl.getUniformLocation(prog, 'uFocal'), readBannerShatterConfig().perspective);
 			const uTimeLoc = gl.getUniformLocation(prog, 'uTime');
 			window.__dbgGL = { ...(window.__dbgGL || {}), prog, uTimeLoc };
 
@@ -751,17 +894,16 @@ void main() { fragColor = texture(uTex, vUV) * vAlpha; }`;
 		const w = bg.offsetWidth;
 		const h = bg.offsetHeight;
 		const rect = coverRect(cur, w, h);
-		/* WebGL 路径碎片数量：GPU 一次 draw call 结算，25600 片（约 7px/片）也轻松；
-		   再小就成噪点粉尘了。小屏 100×64。DOM 回退在下方单独降档。 */
+		const cfg = readBannerShatterConfig();
+		/* WebGL 路径碎片数量（GPU 一次 draw call 结算，多几倍也轻松）；小屏与 DOM 回退单独降档 */
 		const small = w < 768;
-		const cols = small ? 100 : 33;
-		const rows = small ? 64 : 33;
+		const cols = small ? cfg.small_cols : cfg.cols;
+		const rows = small ? cfg.small_rows : cfg.rows;
 		const cw = w / cols;
 		const ch = h / rows;
-		/* 风向：四个对角（左下→右上、右下→左上、左上→右下、右上→左下）+ 左右水平，
-		   六选一再叠 ±12° 抖动，不再总是水平吹 */
-		const baseAngles = [45, 135, 225, 315, 0, 180];
-		const windAngle = ((baseAngles[(Math.random() * baseAngles.length) | 0] + Math.random() * 24 - 12) * Math.PI) / 180;
+		/* 风向：候选角度随机取一，再叠 ±wind_jitter 抖动 */
+		const baseAngles = cfg.wind_angles;
+		const windAngle = ((baseAngles[(Math.random() * baseAngles.length) | 0] + Math.random() * cfg.wind_jitter * 2 - cfg.wind_jitter) * Math.PI) / 180;
 		const wx = Math.cos(windAngle);
 		const wy = Math.sin(windAngle);
 		const px = -wy; /* 垂直于风向，用于横向飘摆 */
@@ -777,6 +919,8 @@ void main() { fragColor = texture(uTex, vUV) * vAlpha; }`;
 		/* 碎片层已完整复刻当前图，立刻隐藏底下的原图——否则碎片飞走后露出的还是旧图，
 		   清理时才瞬间跳新图（旧图重现→突变） */
 		stage.currentSrc = nextSrc;
+		applyBannerTextColors(nextSrc);
+		updateBannerSlogan();
 
 		/* WebGL 优先：1 个 canvas、1 次 draw call，GPU 结算全部动画，主线程零开销 */
 		if (initBannerShatterGL(stage, rect, w, h, shards, px, py)) {
@@ -784,9 +928,9 @@ void main() { fragColor = texture(uTex, vUV) * vAlpha; }`;
 			return;
 		}
 
-		/* 回退：DOM 碎片（无 WebGL2 或首帧自检失败），降到 45×28 保证流畅 */
-		const dcols = small ? 23 : 45;
-		const drows = small ? 14 : 28;
+		/* 回退：DOM 碎片（无 WebGL2 或首帧自检失败），降到 fallback 档位保证流畅 */
+		const dcols = small ? cfg.fallback_small_cols : cfg.fallback_cols;
+		const drows = small ? cfg.fallback_small_rows : cfg.fallback_rows;
 		const domShards =
 			dcols === cols && drows === rows
 				? shards
@@ -895,12 +1039,15 @@ void main() { fragColor = texture(uTex, vUV) * vAlpha; }`;
 
 		bannerStage = { bg, cur, nxt, lists, idx: 0, currentSrc: list[0] };
 		watchBannerTheme();
+		/* 首图文字配色（cur 已加载，直接用其解码结果采样亮度） */
+		applyBannerTextColors(list[0], cur);
 
-		/* 空闲时预载轮换池其余图片 */
+		/* 空闲时预载轮换池其余图片，并顺带算好各自的亮度供换图时配色 */
 		const preloadRest = () =>
 			[...lists.light, ...lists.dark].forEach((src) => {
 				const img = new Image();
 				img.src = src;
+				bannerLuma(src, img);
 			});
 		if ('requestIdleCallback' in window) window.requestIdleCallback(preloadRest);
 		else setTimeout(preloadRest, 2000);
@@ -922,7 +1069,7 @@ void main() { fragColor = texture(uTex, vUV) * vAlpha; }`;
 				else runBannerShatter(nextSrc);
 			};
 			probe.src = nextSrc;
-		}, BANNER_SWAP_INTERVAL);
+		}, readBannerShatterConfig().interval);
 	}
 
 	function initHomeBanner() {

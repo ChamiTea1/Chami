@@ -1,4 +1,23 @@
 @layer components {
+  /* 换图时按背景亮度自适应切换文字颜色（main.js 设置 --home-banner/navbar-text-color） */
+  .home-title {
+    transition: color 0.6s ease;
+  }
+
+  .text-home-navbar {
+    color: var(--home-navbar-text-color, var(--rd-gray-1000));
+    transition: color 0.6s ease;
+  }
+
+  /* 大标题只在每轮的第一张封面展示：换图时按当前图是否为第一张淡入/淡出 */
+  .home-banner-slogan {
+    transition: opacity var(--home-banner-slogan-fade, 0.8s) ease, color 0.6s ease;
+  }
+
+  .home-banner-slogan.is-hidden {
+    opacity: 0;
+  }
+
   .home-title p {
     margin: 0;
     font-family: "Geist Variable", sans-serif;
