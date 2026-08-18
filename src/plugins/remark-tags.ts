@@ -1,5 +1,5 @@
 /**
- * Port of hexo-theme-redefine's tag plugins as a remark plugin:
+ * Tag plugins implemented as a remark plugin:
  *   {% button %}/{% btn %}/{% cell %}, {% callout %}/{% note %}...,
  *   {% folding %}, {% grid %}/{% btns %}/{% buttons %}, {% tabs %}/{% subtabs %}
  *

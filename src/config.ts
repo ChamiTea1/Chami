@@ -1,7 +1,5 @@
 /**
- * Redefine theme configuration for Astro.
- * Ported from hexo-theme-redefine's _config.yml.
- * https://github.com/EvanNotFound/hexo-theme-redefine
+ * Theme configuration for the blog.
  */
 
 export const siteConfig = {
@@ -460,7 +458,7 @@ export const markdownConfig = {
 };
 
 /* ------------------------------------------------------------------ */
-/* CSS variable generation (port of scripts/helpers/style-helpers.js)  */
+/* CSS variable generation */
 /* ------------------------------------------------------------------ */
 
 const safeValue = (value: unknown, fallback: string): string => {

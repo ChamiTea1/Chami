@@ -1,5 +1,5 @@
 /**
- * Rehype filters ported from hexo-theme-redefine's after_post_render filters:
+ * Rehype filters:
  * external link icons, <del> mask, table scroll wrapper, image lazyload,
  * image captions.
  */

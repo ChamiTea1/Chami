@@ -19,7 +19,7 @@ coverPosition: 'right'
 - 更多内容敬请期待
 
 {% note info %}
-本站基于 [Astro](https://astro.build/) 搭建，主题移植自 [Redefine](https://github.com/EvanNotFound/hexo-theme-redefine)。
+本站基于 [Astro](https://astro.build/) 搭建。
 {% endnote %}
 
 ## 如何开始

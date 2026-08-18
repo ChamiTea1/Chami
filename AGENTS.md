@@ -1,6 +1,6 @@
 ## 项目概况
 
-Astro 7 + Tailwind CSS v4 的个人博客，移植自 [hexo-theme-redefine](https://github.com/EvanNotFound/hexo-theme-redefine)，站点语言为中文。
+Astro 7 + Tailwind CSS v4 的个人博客，站点语言为中文。
 
 - Node 版本要求 `>=22.12.0`（见 `package.json` engines 和 `.nvmrc`）。
 - 常用命令：

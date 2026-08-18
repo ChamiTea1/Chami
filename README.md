@@ -1,23 +1,23 @@
-# AstroChamiBlog
+# Chami
 
-An Astro port of [hexo-theme-redefine](https://github.com/EvanNotFound/hexo-theme-redefine) by EvanNotFound.
+A modern personal blog built with [Astro](https://astro.build/). Fast, stylish and fully self-contained — features a gradient navbar, card-style articles, dark/light mode, single-page navigation and more.
 
 ## Features
 
-- Redefine design system: gradient navbar, card-style articles, Geist/Chillax fonts, Font Awesome icons
+- Modern design system: gradient navbar, card-style articles, Geist/Chillax fonts, Font Awesome icons
 - Full-screen home banner with fixed background, typed subtitle (Typed.js + 一言 API), social links & QR codes
 - Home sidebar (avatar, author Lv, statistics, announcement, links) + post cards with cover/excerpt/tags
 - Article page: cover with blurred title overlay, author + Lv label, meta line (dates, categories, tags, word count, reading time), sticky TOC with scroll spy, copyright box, prev/next navigation, article recommendation (TF-IDF)
 - Dark/light mode toggle (persisted, respects `prefers-color-scheme`), navbar shrink + mobile drawer
 - Side tools: theme toggle, scroll progress percent/bar, scroll top/bottom, RSS
 - **swup 单页切换** (SPA transitions + preload + progress bar + slide animations)
-- **站内搜索** (build-time index, Redefine-style dialog, keyword highlight)
+- **站内搜索** (build-time index, dialog-style search, keyword highlight)
 - **图片查看器** (click to zoom, drag, wheel zoom, prev/next, EXIF panel)
 - **评论系统** (waline / giscus / gitalk / twikoo / utterances / artalk, config-driven)
-- **Hexo tag 插件**: `{% button %}` `{% callout %}` `{% note %}` `{% folding %}` `{% grid %}` `{% tabs %}`
+- **Tag 插件**: `{% button %}` `{% callout %}` `{% note %}` `{% folding %}` `{% grid %}` `{% tabs %}`
 - **Mermaid** diagrams (```mermaid fences), **APlayer** music player, **Preloader** animation, **Pangu** CJK spacing
 - Shiki code highlighting (light/dark themes, mac-style container with copy/fold buttons), lazyload, del-mask, external link icons, table scroll
-- Pages: home (paginated), post, `/archives`, `/tags`, `/tags/<tag>/`, `/categories` (nested), `/categories/<cat>/`, `/friends`, `/bookmarks`, `/essays`, `/photos` (masonry), `/about`, 404
+- Pages: home (paginated), post, `/archives`, `/tags`, `/tags/<tag>/`, `/categories` (nested), `/categories/<cat>/`, `/friends`, `/bookmarks`, `/essays`, `/photos` (masonry), `/music`, `/about`, 404
 - Footer: copyright, runtime counter, site statistics, Vercount page views, ICP, inject
 - Google Analytics, custom font URLs, head/footer injection, RSS + sitemap
 
@@ -30,7 +30,7 @@ An Astro port of [hexo-theme-redefine](https://github.com/EvanNotFound/hexo-them
 │   ├── images/           # favicon, avatar, logo, banner images
 │   └── scripts/          # main.js + Typed.min.js
 ├── src/
-│   ├── config.ts         # Theme configuration (port of _config.yml)
+│   ├── config.ts         # All site options live here
 │   ├── i18n.ts           # Translations (en / zh-CN)
 │   ├── components/       # Navbar, Footer, PostCard, TOC, ...
 │   ├── layouts/BaseLayout.astro
@@ -44,11 +44,11 @@ An Astro port of [hexo-theme-redefine](https://github.com/EvanNotFound/hexo-them
 
 ## Configuration
 
-All theme options live in **`src/config.ts`** (mirrors the Redefine `_config.yml`):
+All site options live in **`src/config.ts`**:
 
 - `siteConfig` — title, subtitle, author, url, language (`en` / `zh-CN`)
 - `themeConfig.colors` — primary color, default mode
-- `themeConfig.home_banner` — banner images, title, typed subtitle, social links, QR codes
+- `themeConfig.home_banner` — banner images, title, typed subtitle, social links, QR codes, shatter effect params
 - `themeConfig.navbar` — links (with optional submenus), gradient colors, widths, **search** (enable/preload/top_n_per_article)
 - `themeConfig.home` — sidebar, post card options
 - `themeConfig.articles` — code block style/themes, TOC, copyright license, **recommendation** (enable/title/limit)
@@ -85,7 +85,7 @@ og_image: './og.jpg'
 ---
 ```
 
-## Hexo tag plugins
+## Tag plugins
 
 ```markdown
 {% button 按钮文字, https://example.com %}
@@ -117,9 +117,5 @@ og_image: './og.jpg'
 - Post URLs are `/blog/<slug>/`; home page pagination is `/page/<n>/`.
 - Local search (`navbar.search.enable`) requires no extra setup — the index is generated at build time (`/search.json`).
 - swup (single page) is enabled by default (`global.single_page`); scripts marked `data-swup-reload-script` re-run on page swaps.
-- Font Awesome assets (including some Pro icons) are bundled from the original theme.
-- Not ported: nodejieba-based Chinese word segmentation for recommendations (a pure-JS TF-IDF tokenizer is used instead), hexo-generator-searchdb XML format (JSON used instead).
-
-## Credit
-
-Theme design by [EvanNotFound](https://github.com/EvanNotFound/hexo-theme-redefine). Please keep the theme credit in the footer.
+- Font Awesome assets (including some Pro icons) are bundled with the site.
+- Chinese word segmentation for recommendations uses a pure-JS TF-IDF tokenizer; the search index uses JSON format.
