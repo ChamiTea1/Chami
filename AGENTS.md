@@ -12,7 +12,7 @@ Astro 7 + Tailwind CSS v4 的个人博客，站点语言为中文。
 
 ## 架构要点
 
-- **`src/config.ts` 是全站唯一配置中心**（对应原 hexo 主题的 `_config.yml`）。功能开关、导航、插件配置都改这里；CSS 主题变量由 `themeVars()` 运行时注入，不要在 CSS 里硬编码颜色值。
+- **`src/config.ts` 是全站唯一配置中心**。功能开关、导航、插件配置都改这里；CSS 主题变量由 `themeVars()` 运行时注入，不要在 CSS 里硬编码颜色值。
 - **`src/plugins/` 是自定义 remark/rehype 插件**（代码块容器、外链图标、图片懒加载/图注/宽高、hexo 标签插件、mermaid 等）。关键陷阱：`{% folding %}`/`{% grid %}`/`{% tabs %}` 等标签的正文走的是 `markdown-render.ts` 的 **mini 渲染管线**，现已与主管线功能对齐（图注、图片宽高、mermaid、Shiki 代码高亮、代码容器均有）——改插件时记得两条管线同步维护。
 - **`public/scripts/main.js` 是手工维护的客户端脚本**（不经过打包），交互逻辑（导航栏、TOC、搜索、懒加载、图片查看器等）都在这里，改前端行为找它。
 - 内容集合定义在 `src/content.config.ts`，文章在 `src/content/blog/`；`src/data/*.json`（essays/friends/bookmarks/masonry）是数据驱动页面。
